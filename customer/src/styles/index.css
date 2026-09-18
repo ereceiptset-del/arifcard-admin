@@ -1,0 +1,93 @@
+@import "tailwindcss";
+
+/*
+ * Tailwind v4 maps `dark:` to `prefers-color-scheme` by default. Addiscard's
+ * theme system (ThemeContext) toggles a `.dark` class on <html> instead, so
+ * every `dark:` utility needs this custom variant to actually respond to it.
+ */
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme {
+  --color-primary: #8055ff;
+  --color-primary-hover: #7447f8;
+  --color-primary-disabled: #a98ff5;
+
+  --color-bg-light: #fafafa;
+  --color-fg-light: #101217;
+  --color-surface-light: #ffffff;
+  --color-surface-secondary-light: #f6f7f8;
+  --color-text-secondary-light: #687180;
+  --color-border-light: #d9dde4;
+  --color-input-border-light: #d5dae1;
+
+  --color-bg-dark: #070b15;
+  --color-fg-dark: #f6f7f9;
+  --color-surface-dark: #141923;
+  --color-surface-secondary-dark: #181d27;
+  --color-text-secondary-dark: #a6afbe;
+  --color-border-dark: #303643;
+  --color-input-dark: #141823;
+
+  --font-sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+
+:root {
+  --primary: #8055ff;
+  --primary-hover: #7447f8;
+  --primary-disabled: #a98ff5;
+  --background: #fafafa;
+  --foreground: #101217;
+  --surface: #ffffff;
+  --surface-secondary: #f6f7f8;
+  --text-primary: #101217;
+  --text-secondary: #687180;
+  --border: #d9dde4;
+  --input-bg: transparent;
+  --input-border: #d5dae1;
+}
+
+.dark {
+  --background: #070b15;
+  --foreground: #f6f7f9;
+  --surface: #141923;
+  --surface-secondary: #181d27;
+  --text-primary: #f6f7f9;
+  --text-secondary: #a6afbe;
+  --border: #303643;
+  --input-bg: #141823;
+  --input-border: #303643;
+  --primary: #8055ff;
+  --primary-hover: #7447f8;
+}
+
+html,
+body,
+#root {
+  min-height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  font-family: var(--font-sans, "Inter", sans-serif);
+  background-color: var(--background);
+  color: var(--foreground);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  transition: background-color 200ms ease, color 200ms ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}

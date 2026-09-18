@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Addiscard</title>
+
+    <!--
+      Anti-flash: applies the persisted/system theme before first paint so
+      dark-mode users never see a light flash on load. Must run synchronously,
+      before any stylesheet paints, and must mirror ThemeContext's storage
+      key + resolution logic exactly.
+    -->
+    <script>
+      (function () {
+        try {
+          var STORAGE_KEY = "addiscard-theme";
+          var stored = localStorage.getItem(STORAGE_KEY) || "system";
+          var systemPrefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+          var isDark = stored === "dark" || (stored === "system" && systemPrefersDark);
+          document.documentElement.classList.toggle("dark", isDark);
+        } catch (e) {
+          /* localStorage or matchMedia unavailable (e.g. privacy mode) — fall back to light. */
+        }
+      })();
+    </script>
+
+    <!-- Typography: Inter, per the design brief -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
+</html>
