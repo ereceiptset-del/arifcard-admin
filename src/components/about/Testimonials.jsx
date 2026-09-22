@@ -13,7 +13,7 @@ const TESTIMONIALS_DATA = [
   {
     id: "james",
     quote:
-      "As a small business owner, Addiscard has been a game-changer. It allows me to offer convenient payment options to my clients while generating an extra revenue stream. The one-time-use codes provide peace of mind, knowing that my transactions are secure. Addiscard is a win-win for both my clients and my business.",
+      "As a small business owner, Arifcard has been a game-changer. It allows me to offer convenient payment options to my clients while generating an extra revenue stream. The one-time-use codes provide peace of mind, knowing that my transactions are secure. Arifcard is a win-win for both my clients and my business.",
     name: "James Carter",
     role: "E-commerce Entrepreneur",
     avatar:
@@ -22,7 +22,7 @@ const TESTIMONIALS_DATA = [
   {
     id: "lena",
     quote:
-      "Shopping online has never been this secure and straightforward. Addiscard's unique codes make me feel confident about the safety of my transactions. It's like having an extra layer of protection. I can't imagine going back to using my regular card for online purchases. Addiscard has won me over!",
+      "Shopping online has never been this secure and straightforward. Arifcard's unique codes make me feel confident about the safety of my transactions. It's like having an extra layer of protection. I can't imagine going back to using my regular card for online purchases. Arifcard has won me over!",
     name: "Lena Moreau",
     role: "Digital Nomad & Content Creator",
     avatar:

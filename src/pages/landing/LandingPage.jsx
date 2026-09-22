@@ -9,7 +9,7 @@ import CTA from "../../components/landing/CTA";
 /**
  * LandingPage
  *
- * Route: / — Addiscard main marketing page built on MarketingLayout
+ * Route: / — Arifcard main marketing page built on MarketingLayout
  * with floating pill navbar, hero section, services, why choose us,
  * how it works, project overview, CTA banner, and footer.
  */

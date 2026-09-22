@@ -8,7 +8,7 @@ const FAQ_ITEMS = [
     id: "buy-card",
     question: "How can I buy a virtual card?",
     answer:
-      "Sign up or log in to your Addiscard account, navigate to the Virtual Cards section, choose your preferred funding option in Ethiopian Birr, and your new USD card is issued instantly with live card number, expiry, and CVV.",
+      "Sign up or log in to your Arifcard account, navigate to the Virtual Cards section, choose your preferred funding option in Ethiopian Birr, and your new USD card is issued instantly with live card number, expiry, and CVV.",
     column: "left",
   },
   {
@@ -31,7 +31,7 @@ const FAQ_ITEMS = [
     id: "transfer-money",
     question: "How can I transfer money?",
     answer:
-      "Head over to the 'Money Transfer' section, input the recipient's Addiscard handle or email along with the amount, and confirm with your secure authentication code.",
+      "Head over to the 'Money Transfer' section, input the recipient's Arifcard handle or email along with the amount, and confirm with your secure authentication code.",
     column: "right",
   },
   {

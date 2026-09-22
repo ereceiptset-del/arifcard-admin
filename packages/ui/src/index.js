@@ -1,4 +1,4 @@
-/** Public surface of the Addiscard design system. */
+/** Public surface of the Arifcard design system. */
 export { ThemeProvider, useTheme } from "./theme/ThemeProvider.jsx";
 export { AppShell } from "./layout/AppShell.jsx";
 

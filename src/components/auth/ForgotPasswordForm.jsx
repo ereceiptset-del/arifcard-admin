@@ -143,7 +143,7 @@ function ForgotPasswordForm({ defaultStep = "request" }) {
       {/* Mobile-only wordmark so branding remains visible when left panel collapses */}
       <div className="lg:hidden mb-8">
         <Link to="/" className="text-[18px] font-semibold tracking-tight text-[#101217] dark:text-[#F6F7F9]">
-          Addiscard
+          Arifcard
         </Link>
       </div>
 

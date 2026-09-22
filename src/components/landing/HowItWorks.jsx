@@ -30,7 +30,7 @@ const STEPS = [
 /**
  * HowItWorks
  *
- * 4-step horizontal process walkthrough for Addiscard
+ * 4-step horizontal process walkthrough for Arifcard
  */
 export default function HowItWorks() {
   return (

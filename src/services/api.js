@@ -1,5 +1,5 @@
 /**
- * Thin fetch wrapper for the Addiscard backend (see backend/src/app.js).
+ * Thin fetch wrapper for the Arifcard backend (see backend/src/app.js).
  * Every non-2xx response is turned into an ApiError carrying the same
  * `message`/`code` the backend's error middleware sends, so callers can
  * show the message directly or branch on `code` (e.g. EMAIL_NOT_VERIFIED).

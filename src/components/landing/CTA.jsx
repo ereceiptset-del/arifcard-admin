@@ -28,7 +28,7 @@ export default function CTA() {
                 to="/register"
                 className="inline-flex items-center gap-2 px-8 py-3.5 rounded-full text-sm font-semibold text-[#070A12] bg-white hover:bg-gray-100 shadow-[0_4px_20px_rgba(255,255,255,0.25)] hover:scale-105 active:scale-95 transition-all"
               >
-                <span>Get Addiscard Now</span>
+                <span>Get Arifcard Now</span>
                 <ArrowRight size={16} />
               </Link>
               <Link

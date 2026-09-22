@@ -3,20 +3,20 @@ import { ChevronDown, HelpCircle } from "lucide-react";
 
 const FAQ_ITEMS = [
   {
-    q: "What is Addiscard?",
-    a: "Addiscard is a fintech platform that allows you to instantly generate virtual USD cards funded in Ethiopian Birr. You can pay for international subscriptions, online ads, flight bookings, and software tools without having an overseas bank account.",
+    q: "What is Arifcard?",
+    a: "Arifcard is a fintech platform that allows you to instantly generate virtual USD cards funded in Ethiopian Birr. You can pay for international subscriptions, online ads, flight bookings, and software tools without having an overseas bank account.",
   },
   {
     q: "How do I fund my wallet in Ethiopia?",
-    a: "You can deposit Ethiopian Birr directly into your Addiscard wallet through local mobile money services like Telebirr, CBE Birr, or direct bank transfer. The deposit is converted into USD instantly at clear, transparent exchange rates.",
+    a: "You can deposit Ethiopian Birr directly into your Arifcard wallet through local mobile money services like Telebirr, CBE Birr, or direct bank transfer. The deposit is converted into USD instantly at clear, transparent exchange rates.",
   },
   {
-    q: "Where can I use my Addiscard Virtual Card?",
-    a: "Your Addiscard Virtual USD card works on any merchant platform accepting global cards, including AliExpress, Amazon, Netflix, Spotify, Facebook Ads, Google Workspace, OpenAI/ChatGPT, GitHub, and airline booking portals.",
+    q: "Where can I use my Arifcard Virtual Card?",
+    a: "Your Arifcard Virtual USD card works on any merchant platform accepting global cards, including AliExpress, Amazon, Netflix, Spotify, Facebook Ads, Google Workspace, OpenAI/ChatGPT, GitHub, and airline booking portals.",
   },
   {
     q: "Are there any hidden monthly maintenance fees?",
-    a: "No. Addiscard has zero hidden monthly or maintenance fees. You only pay for what you spend and the transparent top-up conversion shown upfront before you confirm any deposit.",
+    a: "No. Arifcard has zero hidden monthly or maintenance fees. You only pay for what you spend and the transparent top-up conversion shown upfront before you confirm any deposit.",
   },
   {
     q: "Can I freeze or delete my card at any time?",

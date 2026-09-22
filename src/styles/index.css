@@ -11,7 +11,7 @@
 @source "../../packages/ui/src";
 
 /*
- * Tailwind v4 maps `dark:` to `prefers-color-scheme` by default. Addiscard's
+ * Tailwind v4 maps `dark:` to `prefers-color-scheme` by default. Arifcard's
  * theme system (ThemeContext) toggles a `.dark` class on <html> instead, so
  * every `dark:` utility needs this custom variant to actually respond to it.
  */

@@ -30,7 +30,7 @@ function CardFace({ card }) {
       }`}
     >
       <div className="flex items-start justify-between">
-        <span className="text-[13px] font-semibold text-white/90">Addiscard</span>
+        <span className="text-[13px] font-semibold text-white/90">Arifcard</span>
         <Badge tone={CARD_STATUS_TONE[card.status]}>{CARD_STATUS_LABEL[card.status]}</Badge>
       </div>
 

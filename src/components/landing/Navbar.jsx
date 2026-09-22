@@ -9,7 +9,7 @@ import { useAuth } from "../../context/AuthContext";
  *
  * Exact match to https://yenecard.com/ and reference screenshots:
  * - Floating pill shape (`rounded-full`) with frosted backdrop blur
- * - Gradient brand wordmark: Addiscard (Cyan to Purple)
+ * - Gradient brand wordmark: Arifcard (Cyan to Purple)
  * - Navigation links: Home, About, Services, Announcement
  * - Utilities: Contact, Language selector (EN), Theme switch (Moon/Sun)
  * - Divider and Auth buttons: bordered "Login" and gradient purple "Register"
@@ -48,7 +48,7 @@ export default function Navbar() {
         {/* Brand Wordmark */}
         <Link to="/" className="flex items-center gap-2 group shrink-0">
           <span className="text-xl sm:text-[22px] font-extrabold tracking-tight bg-gradient-to-r from-[#00D2FF] via-[#6366F1] to-[#8055FF] bg-clip-text text-transparent group-hover:opacity-95 transition-opacity">
-            Addiscard
+            Arifcard
           </span>
         </Link>
 

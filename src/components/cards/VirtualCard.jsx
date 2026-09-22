@@ -1,7 +1,7 @@
 /**
  * VirtualCard
  *
- * Minimal, understated virtual card component for Addiscard.
+ * Minimal, understated virtual card component for Arifcard.
  * Matches the reference authentication left panel:
  * - Dark graphite surface: #171C23
  * - Subtle border: 1px #323843
@@ -10,7 +10,7 @@
  * - Understated: No glowing gradients, 3D tilts, or dramatic reflections.
  */
 function VirtualCard({
-  brandName = "Addiscard",
+  brandName = "Arifcard",
   last4 = "4921",
   holderName = "CARD HOLDER",
   expiry = "••/••",
@@ -19,7 +19,7 @@ function VirtualCard({
   return (
     <div
       className={`relative flex flex-col justify-between w-[384px] h-[240px] p-6 rounded-xl bg-[#171C23] border border-[#323843] text-white shadow-sm select-none ${className}`}
-      aria-label="Addiscard Virtual USD Card"
+      aria-label="Arifcard Virtual USD Card"
     >
       {/* Top Row: Wordmark & Outlined Badge */}
       <div className="flex items-center justify-between">

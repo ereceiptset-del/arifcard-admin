@@ -23,7 +23,7 @@ export default function AdminLayout() {
 
   return (
     <AppShell
-      brand="Addiscard Admin"
+      brand="Arifcard Admin"
       brandHref="/"
       navItems={NAV_ITEMS}
       NavLinkComponent={NavLink}

@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "Addiscard shared design tokens, primitives and dashboard shell.",
+  "description": "Arifcard shared design tokens, primitives and dashboard shell.",
   "main": "src/index.js",
   "exports": {
     ".": "./src/index.js",

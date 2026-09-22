@@ -7,7 +7,7 @@ const SERVICES = [
     tag: "Cards",
     icon: CreditCard,
     title: "Buy Virtual Card",
-    description: "Get your Addiscard virtual card in minutes and start spending on shopping, gaming, or your favorite subscriptions.",
+    description: "Get your Arifcard virtual card in minutes and start spending on shopping, gaming, or your favorite subscriptions.",
   },
   {
     number: "02",
@@ -21,7 +21,7 @@ const SERVICES = [
     tag: "Transfer",
     icon: ArrowLeftRight,
     title: "Money Transfer",
-    description: "Move money within Addiscard quickly and securely, with full visibility into every transfer.",
+    description: "Move money within Arifcard quickly and securely, with full visibility into every transfer.",
   },
   {
     number: "04",
@@ -56,7 +56,7 @@ const SERVICES = [
 /**
  * ServicesGrid
  *
- * Numbered grid of the seven core Addiscard capabilities, each with a
+ * Numbered grid of the seven core Arifcard capabilities, each with a
  * category tag, icon, and short description. Cards lift slightly on hover
  * with an accent border, closing with a conversion banner.
  *
@@ -80,7 +80,7 @@ function ServicesGrid({ asPageHero = false }) {
             Everything you need, built into one card
           </h2>
           <p className="mt-3 text-[15px] text-[#687180] dark:text-[#A6AFBE] leading-relaxed">
-            From funding your wallet to spending securely online, every Addiscard service is
+            From funding your wallet to spending securely online, every Arifcard service is
             designed around convenience, control, and speed.
           </p>
         </div>
@@ -114,14 +114,14 @@ function ServicesGrid({ asPageHero = false }) {
           <div className="text-center sm:text-left">
             <p className="text-[15px] font-semibold text-[#101217] dark:text-[#F6F7F9]">Ready to get started?</p>
             <p className="mt-0.5 text-[13px] text-[#687180] dark:text-[#A6AFBE]">
-              Join the people who trust Addiscard for their digital finances.
+              Join the people who trust Arifcard for their digital finances.
             </p>
           </div>
           <Link
             to="/register"
             className="shrink-0 rounded-full bg-[#8055FF] hover:bg-[#7447F8] px-5 py-2.5 text-sm font-semibold text-white transition-colors"
           >
-            Get Addiscard
+            Get Arifcard
           </Link>
         </div>
       </div>

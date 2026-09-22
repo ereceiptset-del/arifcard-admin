@@ -5,7 +5,7 @@ import VirtualCard from "../cards/VirtualCard";
  *
  * The persistent left product presentation panel for authentication screens.
  * Strictly adheres to the reference hierarchy and spacing:
- * 1. Addiscard wordmark (top left)
+ * 1. Arifcard wordmark (top left)
  * 2. Virtual card
  * 3. Marketing headline
  * 4. Supporting text
@@ -23,9 +23,9 @@ function AuthProductPanel({
     <div className="flex flex-col justify-between h-full min-h-screen py-11 px-10 bg-[#070B15] text-white">
       {/* Top Section: Wordmark, Card, and Marketing Copy */}
       <div className="flex flex-col">
-        {/* 1. Addiscard Wordmark */}
+        {/* 1. Arifcard Wordmark */}
         <div className="text-[17px] font-semibold tracking-tight text-white">
-          Addiscard
+          Arifcard
         </div>
 
         {/* 2. Virtual Card */}

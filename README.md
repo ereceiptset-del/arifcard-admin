@@ -1,4 +1,4 @@
-# Addiscard — Frontend
+# Arifcard — Frontend
 
 React + JavaScript + Vite + Tailwind CSS. One application.
 

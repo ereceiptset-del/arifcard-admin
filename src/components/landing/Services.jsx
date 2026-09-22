@@ -141,7 +141,7 @@ export default function Services() {
               Ready to get started?
             </h4>
             <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
-              Join thousands of users who trust Addiscard for their digital finances.
+              Join thousands of users who trust Arifcard for their digital finances.
             </p>
           </div>
           <Link

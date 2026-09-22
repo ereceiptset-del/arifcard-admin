@@ -1,7 +1,7 @@
 import { ApiError } from "./apiClient.js";
 
 /**
- * Client for the real Addiscard backend (backend/src).
+ * Client for the real Arifcard backend (backend/src).
  *
  * Accounts, passwords and email verification are handled by the backend on
  * :4000. This is the only client that talks to it.
@@ -53,7 +53,7 @@ async function request(path, { method = "GET", body, signal, auth = false } = {}
     response = await fetch(`${baseUrl()}${path}`, init);
   } catch (error) {
     if (error?.name === "AbortError") throw error;
-    throw new ApiError("Can't reach the Addiscard server. Start the backend and try again.", {
+    throw new ApiError("Can't reach the Arifcard server. Start the backend and try again.", {
       status: 0,
       code: "NETWORK_ERROR",
     });

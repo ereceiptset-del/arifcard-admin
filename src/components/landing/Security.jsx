@@ -26,7 +26,7 @@ const PILLARS = [
 /**
  * Security
  *
- * Security and trust highlights for Addiscard
+ * Security and trust highlights for Arifcard
  */
 export default function Security() {
   return (
@@ -48,7 +48,7 @@ export default function Security() {
             </h2>
 
             <p className="mt-5 text-base text-gray-600 dark:text-gray-400 leading-relaxed max-w-lg">
-              Addiscard is built on zero-trust financial architecture. Your funds are segregated, your cards are isolated, and you retain total control over spending limits.
+              Arifcard is built on zero-trust financial architecture. Your funds are segregated, your cards are isolated, and you retain total control over spending limits.
             </p>
 
             <ul className="mt-8 space-y-3.5">

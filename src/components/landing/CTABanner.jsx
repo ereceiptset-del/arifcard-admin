@@ -18,14 +18,14 @@ function CTABanner() {
           Ready to spend smarter?
         </h2>
         <p className="mt-3 text-[15px] text-[#8E96A4] leading-relaxed">
-          Open your Addiscard wallet today and get a virtual USD card ready to use in minutes.
+          Open your Arifcard wallet today and get a virtual USD card ready to use in minutes.
         </p>
         <div className="mt-7 flex flex-col sm:flex-row items-center justify-center gap-3">
           <Link
             to="/register"
             className="w-full sm:w-auto rounded-full bg-[#8055FF] hover:bg-[#7447F8] px-6 py-3 text-sm font-semibold text-white transition-colors text-center"
           >
-            Get Addiscard
+            Get Arifcard
           </Link>
           <Link
             to="/login"

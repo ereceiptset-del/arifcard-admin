@@ -9,14 +9,14 @@ const DEFAULT_FAQS = [
       "It's a Visa or Mastercard-branded card that exists only digitally — no physical plastic. You get a full card number, expiry date, and CVV, and can use it anywhere online payments are accepted.",
   },
   {
-    question: "How do I fund my Addiscard wallet?",
+    question: "How do I fund my Arifcard wallet?",
     answer:
       "Add money from your local bank account or supported payment method in birr. Once it lands in your wallet, you can top up any of your virtual cards instantly.",
   },
   {
     question: "Can I use my card on any website?",
     answer:
-      "Yes — your Addiscard virtual card works anywhere that accepts Visa or Mastercard online, including subscriptions, advertising platforms, and international shopping sites.",
+      "Yes — your Arifcard virtual card works anywhere that accepts Visa or Mastercard online, including subscriptions, advertising platforms, and international shopping sites.",
   },
   {
     question: "Is there a limit on how much I can spend?",
@@ -31,7 +31,7 @@ const DEFAULT_FAQS = [
   {
     question: "Which currencies can I top up with?",
     answer:
-      "You fund your wallet in Ethiopian birr and spend from your card in US dollars — Addiscard handles the conversion so you don't have to.",
+      "You fund your wallet in Ethiopian birr and spend from your card in US dollars — Arifcard handles the conversion so you don't have to.",
   },
 ];
 

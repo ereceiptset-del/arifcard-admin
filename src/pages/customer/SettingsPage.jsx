@@ -298,7 +298,7 @@ const FEE_GROUPS = [
     key: "wallet",
     title: "Wallet fees",
     description: "What deposits, withdrawals and transfers cost.",
-    items: ["Deposit", "Withdrawal to bank", "Transfer to another Addiscard user"],
+    items: ["Deposit", "Withdrawal to bank", "Transfer to another Arifcard user"],
   },
   {
     key: "card",

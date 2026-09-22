@@ -142,7 +142,7 @@ export default function ProjectOverview() {
             {/* The Checkout Scene Photo */}
             <img
               src="https://images.unsplash.com/photo-1556740738-b6a63e27c4df?auto=format&fit=crop&w=1600&q=80"
-              alt="Addiscard Financial Dashboard and Merchant Checkout"
+              alt="Arifcard Financial Dashboard and Merchant Checkout"
               className="w-full aspect-[16/10] sm:aspect-[16/9] object-cover transition-transform duration-700 group-hover:scale-[1.04]"
               loading="lazy"
             />

@@ -22,7 +22,7 @@ export default function CustomerLayout() {
 
   return (
     <AppShell
-      brand="Addiscard"
+      brand="Arifcard"
       brandHref="/"
       navItems={NAV_ITEMS}
       NavLinkComponent={NavLink}

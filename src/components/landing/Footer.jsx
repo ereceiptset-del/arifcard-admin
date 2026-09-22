@@ -7,10 +7,10 @@ import { Mail, Send, Sparkles, Check } from "lucide-react";
  *
  * Exact match to media_1789718701302.png and yenecard.com:
  * - Dynamic Light/Dark gradient background with ambient orbs and dot pattern
- * - Left column: Addiscard gradient logo, mission statement, "FOLLOW US" social icons
+ * - Left column: Arifcard gradient logo, mission statement, "FOLLOW US" social icons
  * - Middle column: "USEFUL LINKS" (Terms of Service, Privacy Policy, AML/KYC Policy)
  * - Right column: Dedicated glassmorphic "Subscribe" card with email input and button
- * - Bottom row: "© 2026 Addiscard. All Rights Reserved." and legal links
+ * - Bottom row: "© 2026 Arifcard. All Rights Reserved." and legal links
  */
 export default function Footer() {
   const [email, setEmail] = useState("");
@@ -58,12 +58,12 @@ export default function Footer() {
           <div className="md:col-span-5 lg:col-span-5 flex flex-col items-start">
             <Link to="/" className="flex items-center gap-2 group">
               <span className="text-2xl sm:text-[26px] font-extrabold tracking-tight bg-gradient-to-r from-[#00D2FF] via-[#6366F1] to-[#8055FF] bg-clip-text text-transparent group-hover:opacity-95 transition-opacity">
-                Addiscard
+                Arifcard
               </span>
             </Link>
 
             <p className="mt-4 text-sm leading-relaxed text-slate-500 dark:text-slate-400 max-w-sm">
-              Thank you for choosing Addiscard as your trusted partner for secure online transactions. We are committed to providing you with a seamless and secure experience.
+              Thank you for choosing Arifcard as your trusted partner for secure online transactions. We are committed to providing you with a seamless and secure experience.
             </p>
 
             {/* Follow Us */}
@@ -214,7 +214,7 @@ export default function Footer() {
           <p>
             © 2026{" "}
             <span className="font-semibold text-blue-600 dark:text-blue-400">
-              Addiscard
+              Arifcard
             </span>
             . All Rights Reserved.
           </p>

@@ -9,7 +9,7 @@ const FEATURE_PILLS = [
   },
   {
     icon: Sparkles,
-    label: "The Addiscard Difference",
+    label: "The Arifcard Difference",
     iconBg: "bg-[#7F3DFF]",
     iconColor: "text-white",
   },
@@ -229,7 +229,7 @@ const BRAND_TILES = [
  * - Top badge: ● About Us
  * - Header: Empowering the Future of Online Transactions (with gradient)
  * - Narrative mission statement
- * - 2x2 Feature pills (Our Vision, The Addiscard Difference, Our Commitment, Join Us)
+ * - 2x2 Feature pills (Our Vision, The Arifcard Difference, Our Commitment, Join Us)
  * - 4x4 Global Brands logo grid (16 dark navy tiles)
  */
 export default function AboutHero() {

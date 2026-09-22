@@ -11,7 +11,7 @@ import { ShieldCheck, Zap, Star, TrendingUp } from "lucide-react";
  * - Subtitle describing online platform spending (AliExpress, Netflix, Meta/Google ads, Amazon)
  * - Dark pill CTA: "Apply Virtual Card"
  * - 4 floating fintech trust badges (Secure, +24% Growth, Top Rated, Instant)
- * - Showcase Addiscard Pro Virtual Card peeking upward at the bottom with contactless icon, chip, and VISA badge
+ * - Showcase Arifcard Pro Virtual Card peeking upward at the bottom with contactless icon, chip, and VISA badge
  */
 export default function Hero() {
   return (
@@ -116,7 +116,7 @@ export default function Hero() {
           </div>
         </div>
 
-        {/* Addiscard Pro Virtual Card (Showcase Edition from Reference Screenshot) */}
+        {/* Arifcard Pro Virtual Card (Showcase Edition from Reference Screenshot) */}
         <div className="relative w-[340px] sm:w-[370px] h-[215px] sm:h-[225px] rounded-[20px] p-5 sm:p-6 flex flex-col justify-between select-none bg-gradient-to-br from-[#0D0B22] via-[#16124A] to-[#090717] border border-[#8B5CF6]/30 shadow-[0_20px_50px_rgba(0,0,0,0.4),0_0_36px_rgba(99,102,241,0.25)] text-white hover:scale-[1.02] transition-transform duration-300">
           {/* Top Row: Wordmark & Contactless Icon */}
           <div className="flex items-start justify-between">
