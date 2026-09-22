@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { Menu, X, Globe, Moon, Sun, ChevronDown } from "lucide-react";
 import { useTheme } from "../../context/ThemeContext";
+import { useAuth } from "../../context/AuthContext";
 
 /**
  * Navbar
@@ -16,6 +17,7 @@ import { useTheme } from "../../context/ThemeContext";
  */
 export default function Navbar() {
   const { resolvedTheme, setTheme } = useTheme();
+  const { isAuthenticated } = useAuth();
   const [isScrolled, setIsScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [langDropdownOpen, setLangDropdownOpen] = useState(false);
@@ -137,21 +139,32 @@ export default function Navbar() {
           {/* Thin Vertical Divider */}
           <div className="w-[1px] h-4 bg-black/10 dark:bg-white/15 my-auto" />
 
-          {/* Login Button */}
-          <Link
-            to="/login"
-            className="px-4 py-1.5 rounded-full text-[13px] font-semibold text-[#374151] dark:text-[#D1D5DB] border border-black/15 dark:border-white/15 hover:border-[#4F46E5] hover:text-[#4F46E5] dark:hover:border-[#818CF8] dark:hover:text-[#818CF8] transition-all whitespace-nowrap"
-          >
-            Login
-          </Link>
+          {isAuthenticated ? (
+            <Link
+              to="/customer"
+              className="px-4.5 py-1.5 rounded-full text-[13px] font-semibold text-white bg-gradient-to-r from-[#8055FF] to-[#6366F1] hover:from-[#7447F8] hover:to-[#4F46E5] shadow-[0_2px_12px_rgba(128,85,255,0.35)] hover:shadow-[0_4px_18px_rgba(128,85,255,0.45)] hover:-translate-y-0.5 transition-all whitespace-nowrap"
+            >
+              Dashboard
+            </Link>
+          ) : (
+            <>
+              {/* Login Button */}
+              <Link
+                to="/login"
+                className="px-4 py-1.5 rounded-full text-[13px] font-semibold text-[#374151] dark:text-[#D1D5DB] border border-black/15 dark:border-white/15 hover:border-[#4F46E5] hover:text-[#4F46E5] dark:hover:border-[#818CF8] dark:hover:text-[#818CF8] transition-all whitespace-nowrap"
+              >
+                Login
+              </Link>
 
-          {/* Register Button */}
-          <Link
-            to="/register"
-            className="px-4.5 py-1.5 rounded-full text-[13px] font-semibold text-white bg-gradient-to-r from-[#4F46E5] to-[#7C3AED] hover:from-[#4338CA] hover:to-[#6D28D9] shadow-[0_2px_12px_rgba(99,102,241,0.35)] hover:shadow-[0_4px_18px_rgba(99,102,241,0.45)] hover:-translate-y-0.5 transition-all whitespace-nowrap"
-          >
-            Register
-          </Link>
+              {/* Register Button */}
+              <Link
+                to="/register"
+                className="px-4.5 py-1.5 rounded-full text-[13px] font-semibold text-white bg-gradient-to-r from-[#4F46E5] to-[#7C3AED] hover:from-[#4338CA] hover:to-[#6D28D9] shadow-[0_2px_12px_rgba(99,102,241,0.35)] hover:shadow-[0_4px_18px_rgba(99,102,241,0.45)] hover:-translate-y-0.5 transition-all whitespace-nowrap"
+              >
+                Register
+              </Link>
+            </>
+          )}
         </div>
 
         {/* Mobile Hamburger & Controls */}
@@ -218,20 +231,32 @@ export default function Navbar() {
           </div>
 
           <div className="mt-auto flex flex-col gap-3 pt-6 border-t border-black/10 dark:border-white/10">
-            <Link
-              to="/login"
-              onClick={() => setMobileMenuOpen(false)}
-              className="w-full py-3 text-center text-[15px] font-semibold text-[#374151] dark:text-[#D1D5DB] rounded-full border border-black/15 dark:border-white/15"
-            >
-              Login
-            </Link>
-            <Link
-              to="/register"
-              onClick={() => setMobileMenuOpen(false)}
-              className="w-full py-3 text-center text-[15px] font-semibold text-white rounded-full bg-gradient-to-r from-[#4F46E5] to-[#7C3AED] shadow-[0_4px_20px_rgba(99,102,241,0.35)]"
-            >
-              Register
-            </Link>
+            {isAuthenticated ? (
+              <Link
+                to="/customer"
+                onClick={() => setMobileMenuOpen(false)}
+                className="w-full py-3 text-center text-[15px] font-semibold text-white rounded-full bg-gradient-to-r from-[#8055FF] to-[#6366F1] shadow-[0_4px_20px_rgba(128,85,255,0.35)]"
+              >
+                Go to Dashboard
+              </Link>
+            ) : (
+              <>
+                <Link
+                  to="/login"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="w-full py-3 text-center text-[15px] font-semibold text-[#374151] dark:text-[#D1D5DB] rounded-full border border-black/15 dark:border-white/15"
+                >
+                  Login
+                </Link>
+                <Link
+                  to="/register"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="w-full py-3 text-center text-[15px] font-semibold text-white rounded-full bg-gradient-to-r from-[#4F46E5] to-[#7C3AED] shadow-[0_4px_20px_rgba(99,102,241,0.35)]"
+                >
+                  Register
+                </Link>
+              </>
+            )}
           </div>
         </div>
       )}

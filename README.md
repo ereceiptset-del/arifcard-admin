@@ -1,47 +1,53 @@
 # Addiscard — Frontend
 
-Fintech web app: fund a wallet locally, spend with a virtual USD card
-internationally.
+React + JavaScript + Vite + Tailwind CSS. One application.
 
-Stack: React + JavaScript + Vite, React Router. (Framer Motion, React Hook
-Form, Zod, and Lucide React are added in the steps that need them, so the
-dependency list stays minimal for now.)
+| Path                 | What it is                                    |
+| -------------------- | --------------------------------------------- |
+| `src/`               | The app: marketing, auth, `/customer`, `/admin` |
+| `packages/ui/`       | Design tokens, primitives, dashboard shell    |
+| `packages/services/` | Auth client and the browser-side demo store   |
 
-## Getting started
+`packages/*` are npm workspaces. `vite.config.js` aliases them to their
+source so their JSX goes through the React transform.
+
+## Install and run
 
 ```bash
+cd frontend
 npm install
-npm run dev
+npm run dev            # http://localhost:5173
 ```
 
-## Structure
+The backend must be running too, for sign-in:
 
-```
-src/
-├── assets/           static images/icons
-├── components/
-│   ├── auth/         auth-specific UI (built alongside each auth step)
-│   ├── cards/         virtual card presentation
-│   ├── landing/       landing-page sections
-│   ├── layout/        shared chrome (navbar, footer, etc.)
-│   └── ui/            generic building blocks (buttons, inputs, ...)
-├── context/           React context providers (e.g. theme, auth — later steps)
-├── hooks/             shared hooks
-├── layouts/           page shells, e.g. AuthLayout
-├── lib/               framework-agnostic helpers
-├── pages/
-│   ├── auth/          /login, /register, /verify, /forgot-password
-│   └── landing/       /
-├── routes/            route table (AppRoutes)
-├── services/          API clients (added once the backend exists)
-├── styles/            tokens.css (design tokens) + global.css (reset/base)
-├── App.jsx
-└── main.jsx
+```bash
+cd backend
+npm run dev            # http://localhost:4000
 ```
 
-## Status
+## Build and lint
 
-This is Step 1 of the phased build: routing, global styles, design tokens,
-font setup, and empty placeholder routes only. No detailed UI, forms,
-theming logic, backend, or motion yet — those arrive in later steps.
-# addiscard-back
+```bash
+npm run build
+npm run lint
+```
+
+## Signed-in areas
+
+`/customer` and `/admin` are both behind `ProtectedRoute`. They are built
+from `packages/ui`, which needs its own theme and toast providers — those
+are mounted on those two subtrees in `src/routes/AppRoutes.jsx`, not around
+the whole app, because the marketing and auth pages do not use them. The
+shared theme provider uses the same storage key as the site's own
+`ThemeContext`, so light/dark stays consistent across the two.
+
+## Data
+
+Sign-in is real. Everything the dashboards display is demo data generated
+in the browser by `packages/services/src/localStore.js` — per-browser, reset
+when site data is cleared, and labelled DEMO in the UI.
+
+`.env` points at `http://localhost:4000/api` for local development;
+`.env.production` uses the relative `/api`, which Firebase Hosting rewrites
+to the Cloud Function.

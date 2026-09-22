@@ -3,11 +3,15 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
+  "workspaces": [
+    "packages/*"
+  ],
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "lint": "oxlint",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "lint": "oxlint src packages",
+    "deploy": "npm run build && firebase deploy --only hosting"
   },
   "dependencies": {
     "framer-motion": "^13.4.0",

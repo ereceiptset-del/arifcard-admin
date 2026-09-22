@@ -7,8 +7,8 @@ import ForgotPasswordForm from "../../components/auth/ForgotPasswordForm";
  * which supplies the persistent left product panel and the animated
  * form slot.
  */
-function ForgotPasswordPage() {
-  return <ForgotPasswordForm />;
+function ForgotPasswordPage({ defaultStep }) {
+  return <ForgotPasswordForm defaultStep={defaultStep} />;
 }
 
 export default ForgotPasswordPage;

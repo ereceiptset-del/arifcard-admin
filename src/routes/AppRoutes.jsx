@@ -1,43 +1,122 @@
-import { Routes, Route } from "react-router-dom";
-import LandingPage from "../pages/landing/LandingPage";
-import AboutPage from "../pages/about/AboutPage";
-import ServicesPage from "../pages/services/ServicesPage";
-import AnnouncementPage from "../pages/announcement/AnnouncementPage";
-import ContactPage from "../pages/contact/ContactPage";
-import AuthLayout from "../layouts/AuthLayout";
-import LoginPage from "../pages/auth/LoginPage";
-import RegisterPage from "../pages/auth/RegisterPage";
-import VerifyPage from "../pages/auth/VerifyPage";
-import ForgotPasswordPage from "../pages/auth/ForgotPasswordPage";
+import { lazy, Suspense } from "react";
+import { Routes, Route, Navigate } from "react-router-dom";
+import { ThemeProvider as UiThemeProvider, ToastProvider } from "@addiscard/ui";
+
+// Marketing pages are lazy-loaded so each page can be downloaded
+// only when the user navigates to that route.
+const LandingPage = lazy(() => import("../pages/landing/LandingPage"));
+const AboutPage = lazy(() => import("../pages/about/AboutPage"));
+const ServicesPage = lazy(() => import("../pages/services/ServicesPage"));
+const AnnouncementPage = lazy(() => import("../pages/announcement/AnnouncementPage"));
+const ContactPage = lazy(() => import("../pages/contact/ContactPage"));
+
+// Authentication layout and pages are also split into separate chunks.
+// This prevents all authentication code from being included in the
+// initial JavaScript bundle.
+const AuthLayout = lazy(() => import("../layouts/AuthLayout"));
+const LoginPage = lazy(() => import("../pages/auth/LoginPage"));
+const RegisterPage = lazy(() => import("../pages/auth/RegisterPage"));
+const VerifyPage = lazy(() => import("../pages/auth/VerifyPage"));
+const ForgotPasswordPage = lazy(() => import("../pages/auth/ForgotPasswordPage"));
+
+// Signed-in areas.
+const CustomerLayout = lazy(() => import("../layouts/CustomerLayout"));
+const CustomerHomePage = lazy(() => import("../pages/customer/HomePage"));
+const CustomerWalletPage = lazy(() => import("../pages/customer/WalletPage"));
+const CustomerCardsPage = lazy(() => import("../pages/customer/CardsPage"));
+const CustomerSettingsPage = lazy(() => import("../pages/customer/SettingsPage"));
+
+const AdminLayout = lazy(() => import("../layouts/AdminLayout"));
+const AdminOverviewPage = lazy(() => import("../pages/admin/OverviewPage"));
+const AdminCustomersPage = lazy(() => import("../pages/admin/CustomersPage"));
+const AdminCardsPage = lazy(() => import("../pages/admin/CardsPage"));
+const AdminPaymentsPage = lazy(() => import("../pages/admin/PaymentsPage"));
+const AdminSettingsPage = lazy(() => import("../pages/admin/SettingsPage"));
+
+import ProtectedRoute from "../components/auth/ProtectedRoute";
 
 /**
  * Central route table.
  *
- * The marketing pages (/, /about, /services, /announcement, /contact) each
- * render their own MarketingLayout independently — unlike the auth routes,
- * they don't share a layout route, since there's no persistent element
- * (like the auth panel) that needs to survive navigation between them.
+ * Two signed-in areas live in this one app: `/customer` and `/admin`.
+ * Both are built on the shared components in `packages/ui`, which need two
+ * providers of their own — the theme (sharing a storage key with the site's
+ * ThemeContext, so the two stay on the same light/dark setting) and toasts.
+ * The marketing and auth pages use neither, so both are mounted on these
+ * subtrees rather than around the whole app.
  *
- * The four auth routes are nested under the AuthLayout layout route so the
- * layout (and its left product panel) mounts once and persists while React
- * Router swaps only the nested page via <Outlet />.
+ * Pages are lazy-loaded using React.lazy() so Vite can create separate
+ * JavaScript chunks for each route.
  */
 function AppRoutes() {
   return (
-    <Routes>
-      <Route path="/" element={<LandingPage />} />
-      <Route path="/about" element={<AboutPage />} />
-      <Route path="/services" element={<ServicesPage />} />
-      <Route path="/announcement" element={<AnnouncementPage />} />
-      <Route path="/contact" element={<ContactPage />} />
+    <Suspense
+      fallback={
+        <div className="min-h-screen flex items-center justify-center bg-[#F8F9FB] dark:bg-[#080C16]">
+          <div className="w-8 h-8 rounded-full border-2 border-[#8055FF] border-t-transparent animate-spin" />
+        </div>
+      }
+    >
+      <Routes>
+        {/* Public marketing pages */}
+        <Route path="/" element={<LandingPage />} />
+        <Route path="/about" element={<AboutPage />} />
+        <Route path="/services" element={<ServicesPage />} />
+        <Route path="/announcement" element={<AnnouncementPage />} />
+        <Route path="/contact" element={<ContactPage />} />
 
-      <Route element={<AuthLayout />}>
-        <Route path="/login" element={<LoginPage />} />
-        <Route path="/register" element={<RegisterPage />} />
-        <Route path="/verify" element={<VerifyPage />} />
-        <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-      </Route>
-    </Routes>
+        {/* Public auth pages */}
+        <Route element={<AuthLayout />}>
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/register" element={<RegisterPage />} />
+          <Route path="/verify" element={<VerifyPage />} />
+          <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+          <Route path="/reset-password" element={<ForgotPasswordPage defaultStep="reset" />} />
+        </Route>
+
+        {/* Signed-in customer area */}
+        <Route
+          path="/customer"
+          element={
+            <ProtectedRoute>
+              <UiThemeProvider>
+                <ToastProvider>
+                  <CustomerLayout />
+                </ToastProvider>
+              </UiThemeProvider>
+            </ProtectedRoute>
+          }
+        >
+          <Route index element={<CustomerHomePage />} />
+          <Route path="wallet" element={<CustomerWalletPage />} />
+          <Route path="cards" element={<CustomerCardsPage />} />
+          <Route path="settings" element={<CustomerSettingsPage />} />
+        </Route>
+
+        {/* Signed-in admin area */}
+        <Route
+          path="/admin"
+          element={
+            <ProtectedRoute>
+              <UiThemeProvider>
+                <ToastProvider>
+                  <AdminLayout />
+                </ToastProvider>
+              </UiThemeProvider>
+            </ProtectedRoute>
+          }
+        >
+          <Route index element={<AdminOverviewPage />} />
+          <Route path="customers" element={<AdminCustomersPage />} />
+          <Route path="cards" element={<AdminCardsPage />} />
+          <Route path="payments" element={<AdminPaymentsPage />} />
+          <Route path="settings" element={<AdminSettingsPage />} />
+        </Route>
+
+        {/* The old dashboard path, kept working as a redirect. */}
+        <Route path="/dashboard/*" element={<Navigate to="/customer" replace />} />
+      </Routes>
+    </Suspense>
   );
 }
 

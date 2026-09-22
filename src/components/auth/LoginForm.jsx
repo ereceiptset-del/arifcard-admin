@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link, useNavigate, useSearchParams } from "react-router-dom";
+import { Link, useNavigate, useSearchParams, useLocation } from "react-router-dom";
 import { Eye, EyeOff } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 import { ApiError } from "../../services/api";
@@ -9,28 +9,15 @@ import { loginSchema, validate } from "../../validation/authSchemas";
  * LoginForm
  *
  * Light-mode authentication form for the /login route.
- * Matches the reference screenshot:
- * - Direct placement on light background (#FAFAFA), no card/shadow wrapper
- * - Width: max-w-[384px]
- * - Heading: "Sign in" (22px, font-semibold)
- * - Subtitle: "Use the email on your account." (14px, #687180)
- * - Email input with placeholder "you@example.com"
- * - Password input with right-aligned "Forgot your password?" label and Eye toggle
- * - Purple "Sign In" button (#8055FF)
- * - Bottom link: "New here? Create an account"
- *
- * Submits to POST /api/auth/login via AuthContext#login. A 403
- * EMAIL_NOT_VERIFIED response (the account exists but never completed the
- * OTP step) gets a distinct message with a link back to /verify instead of
- * the generic "invalid email or password" — there's no dashboard route yet
- * (that lands in a later phase), so a successful login currently redirects
- * to the landing page.
+ * Redirects to the customer dashboard (/customer) upon successful login.
  */
 function LoginForm() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { login } = useAuth();
   const [searchParams] = useSearchParams();
   const justVerified = searchParams.get("verified") === "1";
+  const justReset = searchParams.get("reset") === "1";
 
   const [email, setEmail] = useState(() => searchParams.get("email") || "");
   const [password, setPassword] = useState("");
@@ -55,7 +42,8 @@ function LoginForm() {
     setIsLoading(true);
     try {
       await login(data);
-      navigate("/");
+      const destination = location.state?.from?.pathname || "/customer";
+      navigate(destination, { replace: true });
     } catch (err) {
       if (err instanceof ApiError && err.code === "EMAIL_NOT_VERIFIED") {
         setUnverifiedEmail(data.email);
@@ -88,6 +76,12 @@ function LoginForm() {
       {justVerified && !formError && !unverifiedEmail && (
         <p className="mt-4 text-xs text-emerald-600 dark:text-emerald-400">
           Your email is verified. Sign in to continue.
+        </p>
+      )}
+
+      {justReset && !formError && !unverifiedEmail && (
+        <p className="mt-4 text-xs text-emerald-600 dark:text-emerald-400">
+          Your password has been updated. Sign in with your new password.
         </p>
       )}
 

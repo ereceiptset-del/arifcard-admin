@@ -1,6 +1,16 @@
 @import "tailwindcss";
 
 /*
+ * Design tokens for the signed-in dashboards, which are built from the
+ * shared components in packages/ui. Imported before this file's own rules
+ * so the site's existing base styles still win where the two overlap.
+ */
+@import "../../packages/ui/src/tokens.css";
+
+/* Tailwind must scan the shared package for class names too. */
+@source "../../packages/ui/src";
+
+/*
  * Tailwind v4 maps `dark:` to `prefers-color-scheme` by default. Addiscard's
  * theme system (ThemeContext) toggles a `.dark` class on <html> instead, so
  * every `dark:` utility needs this custom variant to actually respond to it.

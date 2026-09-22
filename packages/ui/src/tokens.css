@@ -1,0 +1,104 @@
+/**
+ * Addiscard shared design tokens.
+ *
+ * Imported by every app after `@import "tailwindcss"`. This is the only
+ * stylesheet in the workspace that defines colour, radius, shadow and
+ * layout values — components use Tailwind utilities that reference these.
+ */
+
+@theme {
+  /* Brand */
+  --color-brand: #8055ff;
+  --color-brand-hover: #7447f8;
+  --color-brand-active: #6c3fe0;
+  --color-brand-muted: #a98ff5;
+  --color-brand-tint: rgba(128, 85, 255, 0.1);
+
+  /* Light surfaces */
+  --color-canvas: #f8f9fb;
+  --color-panel: #ffffff;
+  --color-panel-muted: #fafafb;
+  --color-line: #e8eaee;
+  --color-line-strong: #d5dae1;
+  --color-ink: #101217;
+  --color-ink-soft: #4b5563;
+  --color-ink-muted: #687180;
+  --color-ink-faint: #8e96a4;
+
+  /* Dark surfaces */
+  --color-canvas-dark: #070b15;
+  --color-panel-dark: #0f141d;
+  --color-panel-raised-dark: #0b0f1a;
+  --color-line-dark: #232937;
+  --color-line-strong-dark: #303643;
+  --color-ink-dark: #f6f7f9;
+  --color-ink-muted-dark: #a6afbe;
+
+  /* Status */
+  --color-ok: #059669;
+  --color-warn: #d97706;
+  --color-danger: #dc2626;
+  --color-info: #2563eb;
+
+  /* Layout. `--spacing-*` feeds w-/pl-; `--container-*` feeds max-w-. */
+  --spacing-rail: 240px;
+  --container-content: 960px;
+
+  /* Radii */
+  --radius-field: 8px;
+  --radius-panel: 12px;
+
+  /* Restrained shadows */
+  --shadow-panel: 0 1px 2px rgba(16, 18, 23, 0.04);
+  --shadow-raised: 0 8px 24px rgba(16, 18, 23, 0.08);
+  --shadow-overlay: 0 16px 48px rgba(16, 18, 23, 0.18);
+
+  --font-sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+
+html,
+body,
+#root {
+  min-height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+/*
+ * Base element styles only — no theme-dependent rules live here.
+ *
+ * Hand-written `.dark ...` selectors in this file proved unreliable once
+ * Tailwind processed it, so theming is owned entirely by two mechanisms
+ * that do work: `dark:` utilities on components (the shell sets
+ * `bg-canvas dark:bg-canvas-dark`), and `color-scheme`, which
+ * ThemeProvider sets inline on <html> to paint the native viewport
+ * canvas, scrollbars and form controls.
+ */
+html {
+  color-scheme: light;
+}
+
+body {
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  /* Nothing should scroll sideways, down to 360px. */
+  overflow-x: hidden;
+}
+
+/* Visible keyboard focus everywhere; pointer users don't see it. */
+:focus-visible {
+  outline: 2px solid var(--color-brand);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
