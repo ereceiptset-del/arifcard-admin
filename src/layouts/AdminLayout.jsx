@@ -1,10 +1,11 @@
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
-import { LayoutDashboard, Users, CreditCard, Banknote, Settings } from "lucide-react";
+import { LayoutDashboard, Users, ShieldCheck, CreditCard, Banknote, Settings } from "lucide-react";
 import { AppShell, DemoNotice, Badge } from "@addiscard/ui";
 import { useAuth } from "../context/AuthContext";
 
 const NAV_ITEMS = [
   { label: "Overview", to: "/admin", icon: LayoutDashboard, end: true },
+  { label: "Identity review", to: "/admin/kyc", icon: ShieldCheck },
   { label: "Customers", to: "/admin/customers", icon: Users },
   { label: "Cards", to: "/admin/cards", icon: CreditCard },
   { label: "Payments", to: "/admin/payments", icon: Banknote },

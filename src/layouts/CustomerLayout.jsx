@@ -1,5 +1,5 @@
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
-import { Home, Wallet, CreditCard, Settings, Bell } from "lucide-react";
+import { Home, Wallet, CreditCard, ShieldCheck, Settings, Bell } from "lucide-react";
 import { AppShell, DemoNotice } from "@addiscard/ui";
 import { useAuth } from "../context/AuthContext";
 
@@ -7,6 +7,7 @@ const NAV_ITEMS = [
   { label: "Home", to: "/customer", icon: Home, end: true },
   { label: "Wallet", to: "/customer/wallet", icon: Wallet },
   { label: "Cards", to: "/customer/cards", icon: CreditCard },
+  { label: "Verification", to: "/customer/verification", icon: ShieldCheck },
   { label: "Settings", to: "/customer/settings", icon: Settings },
 ];
 

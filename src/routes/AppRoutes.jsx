@@ -25,6 +25,7 @@ const CustomerHomePage = lazy(() => import("../pages/customer/HomePage"));
 const CustomerWalletPage = lazy(() => import("../pages/customer/WalletPage"));
 const CustomerCardsPage = lazy(() => import("../pages/customer/CardsPage"));
 const CustomerSettingsPage = lazy(() => import("../pages/customer/SettingsPage"));
+const CustomerVerificationPage = lazy(() => import("../pages/customer/VerificationPage"));
 
 const AdminLayout = lazy(() => import("../layouts/AdminLayout"));
 const AdminOverviewPage = lazy(() => import("../pages/admin/OverviewPage"));
@@ -32,8 +33,11 @@ const AdminCustomersPage = lazy(() => import("../pages/admin/CustomersPage"));
 const AdminCardsPage = lazy(() => import("../pages/admin/CardsPage"));
 const AdminPaymentsPage = lazy(() => import("../pages/admin/PaymentsPage"));
 const AdminSettingsPage = lazy(() => import("../pages/admin/SettingsPage"));
+const AdminKycQueuePage = lazy(() => import("../pages/admin/KycQueuePage"));
+const AdminKycCasePage = lazy(() => import("../pages/admin/KycCasePage"));
 
 import ProtectedRoute from "../components/auth/ProtectedRoute";
+import RequireStaff from "../components/auth/RequireStaff";
 
 /**
  * Central route table.
@@ -90,6 +94,7 @@ function AppRoutes() {
           <Route index element={<CustomerHomePage />} />
           <Route path="wallet" element={<CustomerWalletPage />} />
           <Route path="cards" element={<CustomerCardsPage />} />
+          <Route path="verification" element={<CustomerVerificationPage />} />
           <Route path="settings" element={<CustomerSettingsPage />} />
         </Route>
 
@@ -98,11 +103,13 @@ function AppRoutes() {
           path="/admin"
           element={
             <ProtectedRoute>
-              <UiThemeProvider>
-                <ToastProvider>
-                  <AdminLayout />
-                </ToastProvider>
-              </UiThemeProvider>
+              <RequireStaff>
+                <UiThemeProvider>
+                  <ToastProvider>
+                    <AdminLayout />
+                  </ToastProvider>
+                </UiThemeProvider>
+              </RequireStaff>
             </ProtectedRoute>
           }
         >
@@ -110,6 +117,8 @@ function AppRoutes() {
           <Route path="customers" element={<AdminCustomersPage />} />
           <Route path="cards" element={<AdminCardsPage />} />
           <Route path="payments" element={<AdminPaymentsPage />} />
+          <Route path="kyc" element={<AdminKycQueuePage />} />
+          <Route path="kyc/:caseId" element={<AdminKycCasePage />} />
           <Route path="settings" element={<AdminSettingsPage />} />
         </Route>
 
