@@ -13,6 +13,7 @@ import {
 } from "@addiscard/ui";
 import { customerService, ApiError, isUnavailable } from "@addiscard/services";
 import { useAsync } from "../../hooks/useAsync.js";
+import { ServiceHoldNotice } from "../../components/ServiceHoldNotice.jsx";
 
 const money = (value, currency = "USD") =>
   `${Number(value).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${currency}`;
@@ -154,6 +155,12 @@ export default function WalletPage() {
       <p className="mt-1 text-[13.5px] text-ink-muted dark:text-ink-muted-dark">
         Add money in birr, then fund your cards in dollars.
       </p>
+
+      {/* Telebirr is the route money would arrive by, so its state belongs
+          here rather than only on the dashboard. */}
+      <div className="mt-6">
+        <ServiceHoldNotice only={["telebirrPayments"]} />
+      </div>
 
       {loading && (
         <div className="mt-6 flex flex-col gap-5">

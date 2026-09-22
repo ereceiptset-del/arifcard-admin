@@ -12,6 +12,7 @@ import {
 import { customerService, isUnavailable, CARD_STATUS_LABEL, CARD_STATUS_TONE } from "@addiscard/services";
 import { useAuth } from "../../context/AuthContext";
 import { useAsync } from "../../hooks/useAsync.js";
+import { ServiceHoldNotice } from "../../components/ServiceHoldNotice.jsx";
 
 function BalancePanel({ balance, currency }) {
   const formatted = Number(balance).toLocaleString("en-US", {
@@ -116,6 +117,10 @@ export default function HomePage() {
       <h1 className="text-[22px] font-semibold tracking-tight text-ink dark:text-ink-dark">
         Welcome, {firstName}
       </h1>
+
+      <div className="mt-6">
+        <ServiceHoldNotice />
+      </div>
 
       {loading && (
         <div className="mt-6 flex flex-col gap-5">
