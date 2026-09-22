@@ -1,6 +1,6 @@
 import { Banknote } from "lucide-react";
 import { Panel, Table, Badge, ErrorState, EmptyState, Skeleton, DemoNotice } from "@addiscard/ui";
-import { adminService } from "@addiscard/services";
+import { adminService, isUnavailable } from "@addiscard/services";
 import { useAsync } from "../../hooks/useAsync.js";
 
 export default function PaymentsPage() {
@@ -50,7 +50,7 @@ export default function PaymentsPage() {
         Payments
       </h1>
       <p className="mt-1 text-[13.5px] text-ink-muted dark:text-ink-muted-dark">
-        Simulated wallet and card funding activity across all demo customers.
+        Wallet and card funding activity across all customers.
       </p>
 
       <div className="mt-6 flex flex-col gap-5">
@@ -60,7 +60,11 @@ export default function PaymentsPage() {
         </DemoNotice>
 
         {error && !loading ? (
-          <ErrorState title="Could not load payments" message={error.message} onRetry={reload} />
+          isUnavailable(error) ? (
+            <EmptyState title="Payment records are not available yet" description="There is no payment system behind this screen. No transactions are invented to fill it." dashed />
+          ) : (
+            <ErrorState title="Could not load payments" message={error.message} onRetry={reload} />
+          )
         ) : (
           <Panel padded={false}>
             {loading ? (
@@ -71,7 +75,7 @@ export default function PaymentsPage() {
               </div>
             ) : (
               <Table
-                caption="Simulated payments"
+                caption="Payments"
                 columns={columns}
                 rows={data?.payments || []}
                 empty={

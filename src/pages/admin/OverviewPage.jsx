@@ -1,7 +1,7 @@
 import { Link } from "react-router-dom";
 import { Users, CreditCard, CheckCircle2, Banknote } from "lucide-react";
 import { Panel, Skeleton, ErrorState, EmptyState } from "@addiscard/ui";
-import { adminService } from "@addiscard/services";
+import { adminService, isUnavailable } from "@addiscard/services";
 import { useAsync } from "../../hooks/useAsync.js";
 
 const TILES = [
@@ -30,7 +30,7 @@ export default function OverviewPage() {
         Overview
       </h1>
       <p className="mt-1 text-[13.5px] text-ink-muted dark:text-ink-muted-dark">
-        Customers, cards and payments. Demo data, held in this browser.
+        Customers, cards and payments.
       </p>
 
       {loading && (
@@ -43,7 +43,11 @@ export default function OverviewPage() {
 
       {!loading && error && (
         <div className="mt-6">
-          <ErrorState title="Could not load the overview" message={error.message} onRetry={reload} />
+          {isUnavailable(error) ? (
+            <EmptyState title="The overview is not available yet" description="The figures on this screen have no source yet. Showing invented totals would misrepresent the business." dashed />
+          ) : (
+            <ErrorState title="Could not load the overview" message={error.message} onRetry={reload} />
+          )}
         </div>
       )}
 
@@ -74,7 +78,7 @@ export default function OverviewPage() {
               {usd(data.totalBalanceUsd)} USD
             </p>
             <p className="mt-2 text-[12.5px] text-ink-faint">
-              Simulated. No real funds are held anywhere.
+              No real funds are held anywhere.
             </p>
           </Panel>
 
@@ -101,7 +105,7 @@ export default function OverviewPage() {
                 ))}
               </ul>
             ) : (
-              <EmptyState title="No payments yet" description="Simulated transactions appear here." />
+              <EmptyState title="No payments yet" description="Transactions appear here." />
             )}
           </Panel>
         </div>

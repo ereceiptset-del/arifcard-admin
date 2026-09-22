@@ -1,7 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useState } from "react";
 import * as authService from "../services/authService";
 import { getStoredToken } from "../services/api";
-import { setCurrentUser } from "@addiscard/services";
 
 const AuthContext = createContext(null);
 
@@ -26,11 +25,7 @@ export function AuthProvider({ children }) {
       }
       try {
         const { user: me } = await authService.getMe();
-        if (!cancelled) {
-          setUser(me);
-          // The dashboards' demo store keys its data by account.
-          setCurrentUser(me);
-        }
+        if (!cancelled) setUser(me);
       } catch {
         authService.logout();
       } finally {
@@ -47,14 +42,12 @@ export function AuthProvider({ children }) {
   const login = useCallback(async (credentials) => {
     const result = await authService.login(credentials);
     setUser(result.user);
-    setCurrentUser(result.user);
     return result;
   }, []);
 
   const logout = useCallback(() => {
     authService.logout();
     setUser(null);
-    setCurrentUser(null);
   }, []);
 
   return (

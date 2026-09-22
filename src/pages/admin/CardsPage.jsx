@@ -1,6 +1,6 @@
 import { CreditCard } from "lucide-react";
 import { Panel, Table, Badge, ErrorState, EmptyState, Skeleton, DemoNotice } from "@addiscard/ui";
-import { adminService, CARD_STATUS_LABEL, CARD_STATUS_TONE } from "@addiscard/services";
+import { adminService, CARD_STATUS_LABEL, CARD_STATUS_TONE, isUnavailable } from "@addiscard/services";
 import { useAsync } from "../../hooks/useAsync.js";
 
 export default function CardsPage() {
@@ -47,17 +47,21 @@ export default function CardsPage() {
         Cards
       </h1>
       <p className="mt-1 text-[13.5px] text-ink-muted dark:text-ink-muted-dark">
-        Every simulated card across all demo customers.
+        Every card issued to a customer.
       </p>
 
       <div className="mt-6 flex flex-col gap-5">
         <DemoNotice>
-          These records live in this browser only. No card number exists, nothing was issued, and no
-          payment network is involved.
+          There is no card system behind this screen yet. No card number exists, nothing was
+          issued, and no payment network is involved.
         </DemoNotice>
 
         {error && !loading ? (
-          <ErrorState title="Could not load cards" message={error.message} onRetry={reload} />
+          isUnavailable(error) ? (
+            <EmptyState title="Card records are not available yet" description="There is no card system behind this screen. No records are invented to fill it." dashed />
+          ) : (
+            <ErrorState title="Could not load cards" message={error.message} onRetry={reload} />
+          )
         ) : (
           <Panel padded={false}>
             {loading ? (
@@ -68,7 +72,7 @@ export default function CardsPage() {
               </div>
             ) : (
               <Table
-                caption="Simulated cards"
+                caption="Cards"
                 columns={columns}
                 rows={data?.cards || []}
                 empty={

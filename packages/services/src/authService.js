@@ -1,12 +1,9 @@
 import { backendApi, setStoredToken, getStoredToken } from "./backendApi.js";
-import { setCurrentUser } from "./localStore.js";
 
 /**
  * Sign-in against the real backend.
  *
- * Accounts, passwords and email verification are the backend's job. Once
- * signed in, the signed-in account is handed to the local store so the
- * dashboard screens know whose wallet and verification case to show.
+ * Accounts, passwords and email verification are the backend's job.
  *
  * There are no roles here. The backend has no staff permissions yet, so
  * the reviewer console gates on being signed in and nothing more — see the
@@ -16,7 +13,6 @@ export const authService = {
   async login({ email, password }) {
     const data = await backendApi.post("/auth/login", { email, password });
     setStoredToken(data.token);
-    setCurrentUser(data.user);
     return data;
   },
 
@@ -28,14 +24,11 @@ export const authService = {
     backendApi.post("/auth/register", { fullName, email, password }),
 
   async me(options) {
-    const data = await backendApi.get("/auth/me", { ...options, auth: true });
-    setCurrentUser(data.user);
-    return data;
+    return backendApi.get("/auth/me", { ...options, auth: true });
   },
 
   async logout() {
     setStoredToken(null);
-    setCurrentUser(null);
   },
 
   hasStoredSession: () => Boolean(getStoredToken()),

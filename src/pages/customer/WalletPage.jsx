@@ -11,7 +11,7 @@ import {
   TextInput,
   Dialog,
 } from "@addiscard/ui";
-import { customerService, ApiError } from "@addiscard/services";
+import { customerService, ApiError, isUnavailable } from "@addiscard/services";
 import { useAsync } from "../../hooks/useAsync.js";
 
 const money = (value, currency = "USD") =>
@@ -69,7 +69,7 @@ function TopUpDialog({ open, onClose }) {
       open={open}
       onClose={close}
       title="Add money"
-      description="See what a top-up would cost. Simulated figures only."
+      description="See what a top-up would cost."
       footer={
         <>
           <Button variant="secondary" onClick={close}>
@@ -164,7 +164,11 @@ export default function WalletPage() {
 
       {!loading && error && (
         <div className="mt-6">
-          <ErrorState title="Could not load your wallet" message={error.message} onRetry={reload} />
+          {isUnavailable(error) ? (
+            <EmptyState title="Your wallet is not available yet" description="There is no wallet behind this screen yet. A balance is not shown, because any number here would not be your money." dashed />
+          ) : (
+            <ErrorState title="Could not load your wallet" message={error.message} onRetry={reload} />
+          )}
         </div>
       )}
 
@@ -180,7 +184,7 @@ export default function WalletPage() {
             <p className="mt-2 font-mono text-[32px] leading-none text-white">
               {money(data.balance, data.currency)}
             </p>
-            <p className="mt-2 text-[12px] text-ink-faint">Simulated balance. No real funds.</p>
+            <p className="mt-2 text-[12px] text-ink-faint">No real funds.</p>
 
             <div className="mt-6 flex flex-wrap gap-2.5">
               <Button icon={ArrowDownToLine} onClick={() => setTopUpOpen(true)}>
@@ -199,7 +203,7 @@ export default function WalletPage() {
 
           <Panel
             title="Transactions"
-            description="Deposits, transfers and card funding. All simulated."
+            description="Deposits, transfers and card funding."
             padded={false}
           >
             {data.transactions?.length ? (

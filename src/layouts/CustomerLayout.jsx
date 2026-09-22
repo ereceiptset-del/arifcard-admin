@@ -41,8 +41,8 @@ export default function CustomerLayout() {
         <div className="border-b border-line dark:border-line-dark bg-panel-muted dark:bg-panel-dark px-4 sm:px-6 py-3">
           <div className="mx-auto max-w-content">
             <DemoNotice>
-              Balances, exchange rates, fees and card details here are simulated and held in this
-              browser. No real money moves.
+              Wallet, cards and transactions are not built yet. Those screens say so rather than
+              showing a balance, and no real money moves anywhere in this app.
             </DemoNotice>
           </div>
         </div>

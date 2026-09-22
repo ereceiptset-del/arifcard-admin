@@ -1,6 +1,6 @@
 import { Users } from "lucide-react";
 import { Panel, Table, ErrorState, EmptyState, Skeleton } from "@addiscard/ui";
-import { adminService } from "@addiscard/services";
+import { adminService, isUnavailable } from "@addiscard/services";
 import { useAsync } from "../../hooks/useAsync.js";
 
 export default function CustomersPage() {
@@ -45,12 +45,16 @@ export default function CustomersPage() {
         Customers
       </h1>
       <p className="mt-1 text-[13.5px] text-ink-muted dark:text-ink-muted-dark">
-        Everyone in this browser's demo data.
+        Everyone with an account.
       </p>
 
       <div className="mt-6">
         {error && !loading ? (
-          <ErrorState title="Could not load customers" message={error.message} onRetry={reload} />
+          isUnavailable(error) ? (
+            <EmptyState title="The customer list is not available yet" description="There is no customer directory behind this screen. No records are invented to fill it." dashed />
+          ) : (
+            <ErrorState title="Could not load customers" message={error.message} onRetry={reload} />
+          )
         ) : (
           <Panel padded={false}>
             {loading ? (

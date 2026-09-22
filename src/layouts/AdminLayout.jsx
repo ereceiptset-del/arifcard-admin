@@ -29,13 +29,14 @@ export default function AdminLayout() {
       NavLinkComponent={NavLink}
       account={{ name: user?.fullName || "Admin", secondary: user?.email }}
       onSignOut={handleSignOut}
-      topBarExtras={<Badge tone="warn">Demo data</Badge>}
+      topBarExtras={<Badge tone="warn">No access control</Badge>}
       banner={
         <div className="border-b border-line dark:border-line-dark bg-panel-muted dark:bg-panel-dark px-4 sm:px-6 py-3">
           <div className="mx-auto max-w-content">
             <DemoNotice>
-              There is no staff permission check yet: any Addiscard account that can sign in can
-              open this area, and every record shown here is demo data held in this browser.
+              There is no staff permission check yet: any account that can sign in can open this
+              area. The records these screens read do not exist yet, so they show nothing rather
+              than invented figures.
             </DemoNotice>
           </div>
         </div>

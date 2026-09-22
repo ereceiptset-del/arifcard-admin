@@ -15,8 +15,7 @@ import {
   ApiError,
   CARD_STATUS,
   CARD_STATUS_LABEL,
-  CARD_STATUS_TONE,
-} from "@addiscard/services";
+  CARD_STATUS_TONE, isUnavailable } from "@addiscard/services";
 import { useAsync } from "../../hooks/useAsync.js";
 
 /** Masked card face. Real PANs never exist in this prototype. */
@@ -170,15 +169,19 @@ export default function CardsPage() {
 
       {!loading && error && (
         <div className="mt-6">
-          <ErrorState title="Could not load your cards" message={error.message} onRetry={reload} />
+          {isUnavailable(error) ? (
+            <EmptyState title="Cards are not available yet" description="Card issuing is not built. Nothing is shown here rather than a placeholder card that is not yours." dashed />
+          ) : (
+            <ErrorState title="Could not load your cards" message={error.message} onRetry={reload} />
+          )}
         </div>
       )}
 
       {!loading && !error && data && (
         <div className="mt-6 flex flex-col gap-5">
           <DemoNotice>
-            These cards are simulated records. No card number is generated, nothing is issued, and
-            no payment network is involved.
+            Card issuing is not built. No card number is generated, nothing is issued, and no
+            payment network is involved.
           </DemoNotice>
 
           <Panel padded={false}>

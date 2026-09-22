@@ -3,9 +3,8 @@ import { ApiError } from "./apiClient.js";
 /**
  * Client for the real Addiscard backend (backend/src).
  *
- * Signing in is the one thing in these apps that is not local: accounts,
- * passwords and email verification are handled by the backend on :4000.
- * Everything the screens display afterwards comes from localStore.js.
+ * Accounts, passwords and email verification are handled by the backend on
+ * :4000. This is the only client that talks to it.
  *
  * The session token is kept in localStorage under the same key the main web
  * app uses, so the two stay consistent and a sign-in survives a reload.

@@ -9,7 +9,7 @@ import {
   EmptyState,
   DemoNotice,
 } from "@addiscard/ui";
-import { customerService, CARD_STATUS_LABEL, CARD_STATUS_TONE } from "@addiscard/services";
+import { customerService, isUnavailable, CARD_STATUS_LABEL, CARD_STATUS_TONE } from "@addiscard/services";
 import { useAuth } from "../../context/AuthContext";
 import { useAsync } from "../../hooks/useAsync.js";
 
@@ -30,7 +30,7 @@ function BalancePanel({ balance, currency }) {
       <p className="mt-2 font-mono text-[32px] leading-none text-white">
         {formatted} <span className="text-[26px]">{currency}</span>
       </p>
-      <p className="mt-2 text-[12px] text-ink-faint">Simulated balance. No real funds.</p>
+      <p className="mt-2 text-[12px] text-ink-faint">No real funds.</p>
 
       <div className="mt-6 flex flex-wrap gap-2.5">
         <Link
@@ -129,11 +129,19 @@ export default function HomePage() {
 
       {!loading && error && (
         <div className="mt-6">
-          <ErrorState
-            title="Could not load your dashboard"
-            message={error.message}
-            onRetry={reload}
-          />
+          {isUnavailable(error) ? (
+            <EmptyState
+              title="Your dashboard is not available yet"
+              description="The wallet and cards this page shows are not built. Nothing is displayed rather than figures that are not yours."
+              dashed
+            />
+          ) : (
+            <ErrorState
+              title="Could not load your dashboard"
+              message={error.message}
+              onRetry={reload}
+            />
+          )}
         </div>
       )}
 

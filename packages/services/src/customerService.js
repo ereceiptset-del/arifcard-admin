@@ -1,18 +1,18 @@
-import { localCustomer } from "./localStore.js";
+import { unavailable } from "./unavailable.js";
 
 /**
- * Customer wallet and cards.
+ * Customer wallet, cards and transactions.
  *
- * Every figure is invented and lives in this browser only — see
- * localStore.js. The UI labels all of it DEMO.
+ * None of this is built. There is no wallet, no card issuer and no payment
+ * rail behind the backend yet, so every call here refuses instead of
+ * returning a number that would look like the customer's money.
  */
 export const customerService = {
-  overview: () => localCustomer.overview(),
-  wallet: () => localCustomer.wallet(),
-  /** Returns amount, rate, fees and total as separate fields. */
-  quote: ({ amountUsd }) => localCustomer.quote({ amountUsd }),
-  cards: () => localCustomer.cards(),
-  createCard: () => localCustomer.createCard(),
-  toggleFreeze: (cardId) => localCustomer.toggleFreeze(cardId),
-  notifications: () => localCustomer.notifications(),
+  overview: unavailable("Your dashboard"),
+  wallet: unavailable("Your wallet"),
+  quote: unavailable("Top-up pricing"),
+  cards: unavailable("Cards"),
+  createCard: unavailable("Creating a card"),
+  toggleFreeze: unavailable("Freezing a card"),
+  notifications: unavailable("Notifications"),
 };

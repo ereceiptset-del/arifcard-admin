@@ -22,9 +22,9 @@ export default function ConsoleSettingsPage() {
 
       <div className="mt-6 flex flex-col gap-5">
         <DemoNotice>
-          There is no staff permission check yet. Any Addiscard account that can sign in can open this
-          console, and every case here is local demo data. Real permissions have to be enforced by
-          the backend before this means anything.
+          There is no staff permission check yet. Any account that can sign in can open this
+          console. Real permissions have to be enforced by the backend before this area means
+          anything.
         </DemoNotice>
 
         <Panel title="Reviewer account" description="Provisioned internally. Not self-service.">

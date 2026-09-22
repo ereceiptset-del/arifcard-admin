@@ -1,15 +1,15 @@
-import { localAdmin } from "./localStore.js";
+import { unavailable } from "./unavailable.js";
 
 /**
  * Admin screens.
  *
- * Customers, cards and payments all come from the browser-side store in
- * localStore.js — there is no admin API. Nothing here is a permission
- * boundary; the area is gated on being signed in and nothing more.
+ * Nothing here is built. These refuse rather than showing invented
+ * customers, cards or payments, which would misrepresent the state of the
+ * business to staff.
  */
 export const adminService = {
-  overview: () => localAdmin.overview(),
-  customers: () => localAdmin.customers(),
-  cards: () => localAdmin.cards(),
-  payments: () => localAdmin.payments(),
+  overview: unavailable("The admin overview"),
+  customers: unavailable("The customer list"),
+  cards: unavailable("Card records"),
+  payments: unavailable("Payment records"),
 };

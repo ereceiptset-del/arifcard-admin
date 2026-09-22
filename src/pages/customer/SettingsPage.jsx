@@ -9,9 +9,8 @@ import {
   TextInput,
   DemoNotice,
   Skeleton,
-  ErrorState,
-} from "@addiscard/ui";
-import { customerService } from "@addiscard/services";
+  ErrorState, EmptyState } from "@addiscard/ui";
+import { customerService, isUnavailable } from "@addiscard/services";
 import { useAuth } from "../../context/AuthContext";
 import { useAsync } from "../../hooks/useAsync.js";
 
@@ -445,7 +444,11 @@ export default function SettingsPage() {
       <TabPanel value={active}>
         {active === "profile" && loading && <Skeleton className="h-[320px] w-full" />}
         {active === "profile" && !loading && error && (
-          <ErrorState title="Could not load your profile" message={error.message} onRetry={reload} />
+          isUnavailable(error) ? (
+            <EmptyState title="Profile details are not available yet" description="The profile record this tab reads does not exist yet. Your name and email above come from your sign-in." dashed />
+          ) : (
+            <ErrorState title="Could not load your profile" message={error.message} onRetry={reload} />
+          )
         )}
         {active === "profile" && !loading && !error && (
           <ProfileTab />
