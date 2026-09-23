@@ -45,10 +45,13 @@ export const kycService = {
    * Uses XHR rather than fetch because fetch still has no upload progress
    * event, and a customer watching a 10 MB scan needs to see it moving.
    */
-  uploadToSignedUrl({ uploadUrl, file, contentType, onProgress, signal }) {
+  uploadToSignedUrl({ uploadUrl, method = "PUT", file, contentType, onProgress, signal }) {
     return new Promise((resolve, reject) => {
       const request = new XMLHttpRequest();
-      request.open("PUT", uploadUrl, true);
+      // The method comes from the ticket rather than being assumed. A
+      // signed Cloud Storage URL takes PUT; the local emulator, which does
+      // not implement signed writes, takes POST on its own endpoint.
+      request.open(method, uploadUrl, true);
       request.setRequestHeader("Content-Type", contentType);
 
       request.upload.onprogress = (event) => {

@@ -40,6 +40,7 @@ export function EvidenceUpload({ caseId, slot, label, hint, file, onChanged, dis
 
       await kycService.uploadToSignedUrl({
         uploadUrl: ticket.uploadUrl,
+        method: ticket.uploadMethod,
         file: chosen,
         contentType: chosen.type,
         onProgress: setProgress,
