@@ -127,6 +127,8 @@ export function PaymentDialog({ open, onClose, onCompleted }) {
 
   const available = (methods || []).filter((m) => m.available);
   const unavailable = (methods || []).filter((m) => !m.available);
+  // The account the customer must pay into, for the method on the intent.
+  const payee = intent ? methods?.find((m) => m.method === intent.method)?.payee : null;
 
   return (
     <Dialog open={open} onClose={onClose} title="Add money">
@@ -201,13 +203,34 @@ export function PaymentDialog({ open, onClose, onCompleted }) {
             </div>
           </Panel>
 
+          {/* Where the money goes. Without this the customer has an
+              amount and no destination, and a payment sent to the wrong
+              account is one we will refuse and cannot return. */}
+          {payee ? (
+            <Panel className="space-y-1 text-sm">
+              <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-ink-faint">Pay to</p>
+              {payee.name ? (
+                <div className="flex justify-between">
+                  <span className="text-slate-500 dark:text-slate-400">Account name</span>
+                  <span>{payee.name}</span>
+                </div>
+              ) : null}
+              <div className="flex justify-between">
+                <span className="text-slate-500 dark:text-slate-400">Account number</span>
+                <span className="font-mono">{payee.account}</span>
+              </div>
+            </Panel>
+          ) : null}
+
           {/* Deliberately explicit that we cannot see the payment
               ourselves. Arifcard has no merchant access to either
               provider, and implying otherwise would set up a wait for
               something that is never going to happen on its own. */}
           <p className="text-sm text-slate-600 dark:text-slate-300">
-            Pay {birr(intent.amountMinor)} using {METHOD_LABEL[intent.method] || intent.method}, then enter the
-            receipt number below. We cannot see your payment until you give us the number.
+            Pay {birr(intent.amountMinor)} to the account above using{" "}
+            {METHOD_LABEL[intent.method] || intent.method}, then enter the receipt number below. We cannot see
+            your payment until you give us the number, and it must be paid from your own account — the name on
+            the receipt is checked against your verified identity.
           </p>
 
           <TextInput

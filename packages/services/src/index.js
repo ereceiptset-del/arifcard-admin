@@ -11,6 +11,8 @@ export {
   EDITABLE_STATUSES,
   EVIDENCE_SLOTS,
   ACCEPTED_TYPES,
+  DOCUMENT_TYPE,
+  SLOT_COPY,
 } from "./kycService.js";
 export { featuresService, FEATURE_STATE } from "./featuresService.js";
 export { isUnavailable, FEATURE_UNAVAILABLE } from "./unavailable.js";

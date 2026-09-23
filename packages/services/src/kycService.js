@@ -12,6 +12,15 @@ import { backendApi } from "./backendApi.js";
  * backend refuses the attempt regardless.
  */
 export const kycService = {
+  /**
+   * The fixed choices the wizard offers.
+   *
+   * Fetched rather than hard-coded here, so a value this app offers is
+   * always one the backend schema will accept. Two copies of a list
+   * eventually disagree, and the customer is the one who finds out.
+   */
+  options: (o) => backendApi.get("/kyc/options", { ...o, auth: true }),
+
   currentCase: (options) => backendApi.get("/kyc/case", { ...options, auth: true }),
   startCase: () => backendApi.post("/kyc/case", undefined, { auth: true }),
   saveDetails: (caseId, details) =>
@@ -103,3 +112,26 @@ export const EVIDENCE_SLOTS = [
 ];
 
 export const ACCEPTED_TYPES = ["image/jpeg", "image/png", "application/pdf"];
+
+/** Exactly two documents. No driver's licence. */
+export const DOCUMENT_TYPE = { FAYDA: "FAYDA", PASSPORT: "PASSPORT" };
+
+/** What to call each upload, and the help text under it. */
+export const SLOT_COPY = {
+  faydaFront: {
+    label: "Front of the document",
+    hint: "The side with your photo and FAN number.",
+  },
+  faydaBack: {
+    label: "Back of the document",
+    hint: "The side with the barcode.",
+  },
+  passportBiodata: {
+    label: "Passport photo page",
+    hint: "The page with your photo and details. There is no back page to send.",
+  },
+  selfie: {
+    label: "Your selfie",
+    hint: "A clear photo of your face, without a hat or sunglasses, in good light.",
+  },
+};

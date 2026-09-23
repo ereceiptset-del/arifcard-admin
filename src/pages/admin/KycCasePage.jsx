@@ -343,13 +343,35 @@ export default function KycCasePage() {
 
         <Panel title="Details the customer gave" padded={false}>
           <dl>
-            <Row label="Given names" value={details.givenNames} />
-            <Row label="Surname" value={details.surname} />
-            <Row label="Fayda number" value={details.faydaNumber} />
-            <Row label="Date of birth" value={details.dateOfBirth} />
-            <Row label="Method" value={record.method === "MANUAL_FAYDA" ? "Manual Fayda review" : record.method} />
             <Row
-              label="Consent"
+              label="Document"
+              value={record.documentType === "PASSPORT" ? "Passport" : "Fayda national ID"}
+            />
+            <Row label="First name" value={details.givenNames} />
+            <Row label="Last name" value={details.surname} />
+            {/* Named for the document in hand. Cases created before the
+                field was renamed still carry faydaNumber. */}
+            <Row
+              label={record.documentType === "PASSPORT" ? "Passport number" : "FAN number"}
+              value={details.documentNumber || details.faydaNumber}
+            />
+            <Row label="Date of birth" value={details.dateOfBirth} />
+            {details.placeOfBirth && <Row label="Place of birth" value={details.placeOfBirth} />}
+            <Row
+              label="Address"
+              value={[details.addressLine, details.city, details.region, details.country]
+                .filter(Boolean)
+                .join(", ")}
+            />
+            <Row label="Phone number" value={details.phone} />
+            <Row label="Occupation" value={details.occupation} />
+            <Row label="Employment" value={details.employmentStatus} />
+            <Row label="Card purpose" value={details.cardPurpose} />
+            <Row label="Annual income" value={details.annualIncome} />
+            <Row label="Monthly income" value={details.monthlyIncome} />
+            <Row label="Method" value={record.method === "MANUAL_FAYDA" ? "Manual review by a person" : record.method} />
+            <Row
+              label="Terms accepted"
               value={details.consentAcceptedAt ? new Date(details.consentAcceptedAt).toLocaleString() : "Not given"}
             />
           </dl>
