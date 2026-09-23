@@ -1,166 +1,133 @@
+import { useCallback } from "react";
 import { Link } from "react-router-dom";
-import { ArrowDownToLine, Send, Plus, CreditCard } from "lucide-react";
-import {
-  Panel,
-  Button,
-  Badge,
-  Skeleton,
-  ErrorState,
-  EmptyState,
-  DemoNotice,
-} from "@addiscard/ui";
-import { customerService, isUnavailable, CARD_STATUS_LABEL, CARD_STATUS_TONE } from "@addiscard/services";
+import { ShieldCheck, ArrowDownToLine, Clock, AlertTriangle } from "lucide-react";
+import { Panel, Button, Badge, Skeleton, ErrorState } from "@addiscard/ui";
+import { kycService, KYC_STATUS, KYC_STATUS_LABEL, KYC_STATUS_TONE } from "@addiscard/services";
 import { useAuth } from "../../context/AuthContext";
 import { useAsync } from "../../hooks/useAsync.js";
-import { ServiceHoldNotice } from "../../components/ServiceHoldNotice.jsx";
 
-function BalancePanel({ balance, currency }) {
-  const formatted = Number(balance).toLocaleString("en-US", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  });
+/**
+ * The customer's landing screen.
+ *
+ * Its job is to answer "what do I do next", which for almost everyone is
+ * identity verification — nothing else can happen first. Previously this
+ * page fetched a dashboard that does not exist and said only that it was
+ * unavailable, which told a new customer nothing about the one action
+ * open to them.
+ *
+ * There is still no balance here, and that is not an omission to be
+ * filled in later with a placeholder: there is no ledger, so any figure
+ * would be one we invented about somebody's money.
+ */
 
-  return (
-    <div className="rounded-panel bg-[#101217] dark:bg-[#0D1117] p-6">
-      <div className="flex items-center gap-2">
-        <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-ink-faint">
-          Wallet balance
-        </p>
-        <DemoNotice variant="inline" />
-      </div>
-      <p className="mt-2 font-mono text-[32px] leading-none text-white">
-        {formatted} <span className="text-[26px]">{currency}</span>
-      </p>
-      <p className="mt-2 text-[12px] text-ink-faint">No real funds.</p>
-
-      <div className="mt-6 flex flex-wrap gap-2.5">
-        <Link
-          to="/wallet"
-          className="inline-flex items-center gap-2 rounded-field bg-brand px-4 py-2.5 text-[13px] font-semibold text-white hover:bg-brand-hover transition-colors"
-        >
-          <ArrowDownToLine size={15} />
-          Add money
-        </Link>
-        <Link
-          to="/wallet"
-          className="inline-flex items-center gap-2 rounded-field border border-white/15 px-4 py-2.5 text-[13px] font-semibold text-white hover:border-white/30 transition-colors"
-        >
-          <Send size={15} />
-          Send
-        </Link>
-      </div>
-    </div>
-  );
-}
-
-function CardSummary({ cards, canCreate }) {
-  if (!cards?.length) {
-    return (
-      <Panel padded={false}>
-        <EmptyState
-          icon={CreditCard}
-          title="No cards yet"
-          description="Create a virtual card and pay online anywhere the network is accepted."
-          action={
-            canCreate ? (
-              <Link
-                to="/cards"
-                className="inline-flex items-center gap-1.5 rounded-field bg-brand px-4 py-2.5 text-[13px] font-semibold text-white hover:bg-brand-hover transition-colors"
-              >
-                <Plus size={15} />
-                Create a card
-              </Link>
-            ) : (
-              <Button disabled disabledReason="Verify your identity first" icon={Plus}>
-                Create a card
-              </Button>
-            )
-          }
-        />
-      </Panel>
-    );
-  }
-
-  return (
-    <Panel title="Your cards">
-      <ul className="flex flex-col gap-3">
-        {cards.map((card) => (
-          <li key={card.id} className="flex items-center justify-between gap-3">
-            <div className="min-w-0">
-              <p className="font-mono text-[14px] text-ink dark:text-ink-dark">
-                •••• {card.last4}
-              </p>
-              <p className="text-[12px] text-ink-faint">Expires {card.expiry}</p>
-            </div>
-            <Badge tone={CARD_STATUS_TONE[card.status]}>{CARD_STATUS_LABEL[card.status]}</Badge>
-          </li>
-        ))}
-      </ul>
-      <Link
-        to="/cards"
-        className="mt-4 inline-block text-[13px] font-semibold text-brand hover:text-brand-hover"
-      >
-        Manage cards
-      </Link>
-    </Panel>
-  );
-}
+/** What the customer should do, for each place they can be. */
+const NEXT_STEP = {
+  [KYC_STATUS.NOT_SUBMITTED]: {
+    icon: ShieldCheck,
+    title: "Verify your identity",
+    body: "We verify who you are once, before your first card. It takes a few minutes and you will need your Fayda ID or passport.",
+    action: { label: "Start verification", to: "/customer/verification" },
+  },
+  [KYC_STATUS.PENDING]: {
+    icon: Clock,
+    title: "Your documents are with a reviewer",
+    body: "A person is checking what you sent. You cannot change a submission while it is under review — we will email you when there is a decision.",
+    action: { label: "See your submission", to: "/customer/verification" },
+  },
+  [KYC_STATUS.UNDER_REVIEW]: {
+    icon: Clock,
+    title: "Your documents are being reviewed",
+    body: "A reviewer has your submission open. We will email you when there is a decision.",
+    action: { label: "See your submission", to: "/customer/verification" },
+  },
+  [KYC_STATUS.CHANGES_REQUESTED]: {
+    icon: AlertTriangle,
+    title: "We need something changed",
+    body: "A reviewer has asked for a change before we can verify you.",
+    action: { label: "See what is needed", to: "/customer/verification" },
+  },
+  [KYC_STATUS.REJECTED]: {
+    icon: AlertTriangle,
+    title: "Your verification was not accepted",
+    body: "A reviewer could not verify your identity from what was sent. You can send a new submission.",
+    action: { label: "See the reason", to: "/customer/verification" },
+  },
+  [KYC_STATUS.APPROVED]: {
+    icon: ArrowDownToLine,
+    title: "You are verified",
+    body: "You can pay in birr with CBE or Telebirr and submit the receipt number. Funding a card is a separate step and is not available yet.",
+    action: { label: "Add money", to: "/customer/wallet" },
+  },
+};
 
 export default function HomePage() {
   const { user } = useAuth();
-  const { data, error, loading, reload } = useAsync(() => customerService.overview(), []);
+  const load = useCallback(() => kycService.currentCase(), []);
+  const { data, error, loading, reload } = useAsync(load, []);
 
   const firstName = (user?.fullName || "there").split(" ")[0];
+  const kycStatus = data?.kycStatus || data?.case?.kycStatus || KYC_STATUS.NOT_SUBMITTED;
+  const customerReason = data?.case?.customerReason;
+
+  const step = NEXT_STEP[kycStatus] || NEXT_STEP[KYC_STATUS.NOT_SUBMITTED];
+  const Icon = step.icon;
 
   return (
     <>
       <h1 className="text-[22px] font-semibold tracking-tight text-ink dark:text-ink-dark">
         Welcome, {firstName}
       </h1>
+      <p className="mt-1 text-[13.5px] text-ink-muted dark:text-ink-muted-dark">
+        A USD card you top up in birr.
+      </p>
 
-      <div className="mt-6">
-        <ServiceHoldNotice />
-      </div>
-
-      {loading && (
-        <div className="mt-6 flex flex-col gap-5">
-          <Skeleton className="h-[86px] w-full" />
-          <div className="grid grid-cols-1 lg:grid-cols-5 gap-5">
-            <Skeleton className="h-[196px] lg:col-span-3" />
-            <Skeleton className="h-[196px] lg:col-span-2" />
-          </div>
-        </div>
-      )}
+      {loading && <Skeleton className="mt-6 h-[180px] w-full" />}
 
       {!loading && error && (
         <div className="mt-6">
-          {isUnavailable(error) ? (
-            <EmptyState
-              title="Your dashboard is not available yet"
-              description="The wallet and cards this page shows are not built. Nothing is displayed rather than figures that are not yours."
-              dashed
-            />
-          ) : (
-            <ErrorState
-              title="Could not load your dashboard"
-              message={error.message}
-              onRetry={reload}
-            />
-          )}
+          <ErrorState title="Could not load your account" message={error.message} onRetry={reload} />
         </div>
       )}
 
-      {!loading && !error && data && (
-        <div className="mt-6 flex flex-col gap-5">
-          <div className="grid grid-cols-1 lg:grid-cols-5 gap-5">
-            <div className="lg:col-span-3">
-              <BalancePanel balance={data.wallet.balance} currency={data.wallet.currency} />
+      {!loading && !error && (
+        <>
+          <Panel className="mt-6">
+            <div className="flex items-start gap-3">
+              <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-brand/10 text-brand">
+                <Icon size={18} />
+              </span>
+              <div className="min-w-0 flex-1">
+                <div className="flex flex-wrap items-center gap-2">
+                  <h2 className="text-[15px] font-semibold text-ink dark:text-ink-dark">{step.title}</h2>
+                  <Badge tone={KYC_STATUS_TONE[kycStatus]}>{KYC_STATUS_LABEL[kycStatus]}</Badge>
+                </div>
+                <p className="mt-1.5 text-[13.5px] text-ink-muted dark:text-ink-muted-dark">{step.body}</p>
+
+                {/* The reviewer's own words, when they asked for something.
+                    Paraphrasing it here would risk saying something the
+                    reviewer did not mean. */}
+                {customerReason && (
+                  <p className="mt-3 rounded-panel border border-line dark:border-line-dark px-3 py-2 text-[13px] text-ink dark:text-ink-dark">
+                    {customerReason}
+                  </p>
+                )}
+
+                <div className="mt-4">
+                  <Link to={step.action.to}>
+                    <Button>{step.action.label}</Button>
+                  </Link>
+                </div>
+              </div>
             </div>
-            <div className="lg:col-span-2">
-              <CardSummary cards={data.cards} canCreate />
-            </div>
-          </div>
-        </div>
+          </Panel>
+
+          <Panel className="mt-5" title="Your balance">
+            <p className="text-[13.5px] text-ink-muted dark:text-ink-muted-dark">
+              Not available yet. We can check a payment receipt and record it, but crediting a balance is a
+              separate step that is not built — so there is no figure to show.
+            </p>
+          </Panel>
+        </>
       )}
     </>
   );

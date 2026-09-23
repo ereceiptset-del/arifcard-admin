@@ -4,8 +4,9 @@ import { unavailable } from "./unavailable.js";
 /**
  * Staff console.
  *
- * Identity review is real and backed by the API. Cards and payments are
- * not built, so they refuse rather than showing invented records.
+ * Identity review and payment claims are real and backed by the API.
+ * Cards are not built, so that one refuses rather than showing invented
+ * records.
  */
 export const adminService = {
   overview: (options) => backendApi.get("/admin/overview", { ...options, auth: true }),
@@ -35,7 +36,23 @@ export const adminService = {
   retryJob: (jobId, { acknowledgeDuplicateRisk = false } = {}) =>
     backendApi.post(`/admin/notification-jobs/${jobId}/retry`, { acknowledgeDuplicateRisk }, { auth: true }),
 
+  /**
+   * Payment claims.
+   *
+   * Staff see the diagnostic and the attempt count, never the receipt
+   * token. `recheck` re-reads the same receipt — useful once a parser has
+   * been corrected — rather than asking a customer to submit a receipt
+   * they have already given us.
+   */
+  paymentClaims: ({ status } = {}, options) => {
+    const query = status && status !== "all" ? `?status=${encodeURIComponent(status)}` : "";
+    return backendApi.get(`/admin/payments/claims${query}`, { ...options, auth: true });
+  },
+  paymentClaim: (claimId, options) =>
+    backendApi.get(`/admin/payments/claims/${claimId}`, { ...options, auth: true }),
+  recheckClaim: (claimId) =>
+    backendApi.post(`/admin/payments/claims/${claimId}/recheck`, undefined, { auth: true }),
+
   // Not built.
   cards: unavailable("Card records"),
-  payments: unavailable("Payment records"),
 };
