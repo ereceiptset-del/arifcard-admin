@@ -1,14 +1,36 @@
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
-import { LayoutDashboard, Users, ShieldCheck, CreditCard, Banknote, Settings } from "lucide-react";
+import {
+  LayoutDashboard,
+  Users,
+  ShieldCheck,
+  CreditCard,
+  Banknote,
+  ArrowLeftRight,
+  Bell,
+  ScrollText,
+  Settings,
+} from "lucide-react";
 import { AppShell, DemoNotice, Badge } from "@addiscard/ui";
 import { useAuth } from "../context/AuthContext";
 
+/**
+ * The admin workspace.
+ *
+ * Every entry here routes to a real screen. A nav item that led nowhere,
+ * or to a page of invented numbers, would be worse than one that is
+ * absent — so the sections whose data is not built yet say so plainly on
+ * arrival rather than being hidden or faked.
+ */
 const NAV_ITEMS = [
   { label: "Overview", to: "/admin", icon: LayoutDashboard, end: true },
-  { label: "Identity review", to: "/admin/kyc", icon: ShieldCheck },
   { label: "Customers", to: "/admin/customers", icon: Users },
-  { label: "Cards", to: "/admin/cards", icon: CreditCard },
+  { label: "Identity verification", to: "/admin/kyc", icon: ShieldCheck },
   { label: "Payments", to: "/admin/payments", icon: Banknote },
+  { label: "Transactions", to: "/admin/transactions", icon: ArrowLeftRight },
+  { label: "Card orders", to: "/admin/card-orders", icon: PackageOpen },
+  { label: "Cards", to: "/admin/cards", icon: CreditCard },
+  { label: "Notifications", to: "/admin/notifications", icon: Bell },
+  { label: "Audit logs", to: "/admin/audit", icon: ScrollText },
   { label: "Settings", to: "/admin/settings", icon: Settings },
 ];
 

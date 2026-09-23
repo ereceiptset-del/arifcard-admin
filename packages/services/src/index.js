@@ -12,6 +12,7 @@ export {
   EVIDENCE_SLOTS,
   ACCEPTED_TYPES,
   DOCUMENT_TYPE,
+  KYC_METHOD_LABEL,
   SLOT_COPY,
 } from "./kycService.js";
 export { featuresService, FEATURE_STATE } from "./featuresService.js";

@@ -53,6 +53,13 @@ export const adminService = {
   recheckClaim: (claimId) =>
     backendApi.post(`/admin/payments/claims/${claimId}/recheck`, undefined, { auth: true }),
 
-  // Not built.
+  auditLog: ({ action } = {}, options) => {
+    const query = action && action !== "all" ? `?action=${encodeURIComponent(action)}` : "";
+    return backendApi.get(`/admin/audit${query}`, { ...options, auth: true });
+  },
+
+  // Not built. There is no ledger behind these yet, so they refuse rather
+  // than returning records that are not real.
   cards: unavailable("Card records"),
+  transactions: unavailable("Transactions"),
 };

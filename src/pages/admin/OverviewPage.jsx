@@ -1,114 +1,178 @@
+import { useCallback } from "react";
 import { Link } from "react-router-dom";
-import { Users, CreditCard, CheckCircle2, Banknote } from "lucide-react";
-import { Panel, Skeleton, ErrorState, EmptyState } from "@addiscard/ui";
-import { adminService, isUnavailable } from "@addiscard/services";
+import { Clock, Eye, CheckCircle2, XCircle, AlertTriangle, Inbox } from "lucide-react";
+import { Panel, Badge, ErrorState, EmptyState, Skeleton } from "@addiscard/ui";
+import { adminService, KYC_STATUS_LABEL, KYC_STATUS_TONE } from "@addiscard/services";
 import { useAsync } from "../../hooks/useAsync.js";
 
+/**
+ * The staff landing screen.
+ *
+ * Every number here is counted from the same records the queue lists, and
+ * each one links to that queue filtered to what it counted — so a figure
+ * that looks wrong can be opened and checked rather than argued about.
+ *
+ * This page previously rendered customers, cards, payments and a wallet
+ * balance, all of which came out as zero: it was reading a shape the API
+ * stopped returning when the mock server was removed. Four confident
+ * zeros beside real pending work is worse than an empty page, because
+ * nothing about it looked broken.
+ *
+ * What is deliberately absent: registrations over time, payment volume,
+ * approval rate and median review time. Those need period boundaries and
+ * bounded aggregate queries that are not built, and a chart drawn from
+ * data this page does not have would be a drawing, not a measurement.
+ */
+
 const TILES = [
-  { key: "customers", label: "Customers", icon: Users, tone: "info", to: "/admin/customers" },
-  { key: "cards", label: "Cards", icon: CreditCard, tone: "warn", to: "/admin/cards" },
-  { key: "activeCards", label: "Active cards", icon: CheckCircle2, tone: "ok", to: "/admin/cards" },
-  { key: "payments", label: "Payments", icon: Banknote, tone: "info", to: "/admin/payments" },
+  {
+    key: "pending",
+    label: "Waiting for review",
+    icon: Clock,
+    tone: "warn",
+    to: "/admin/kyc?status=PENDING",
+  },
+  {
+    key: "underReview",
+    label: "Being reviewed",
+    icon: Eye,
+    tone: "info",
+    to: "/admin/kyc?status=UNDER_REVIEW",
+  },
+  {
+    key: "changesRequested",
+    label: "Changes requested",
+    icon: AlertTriangle,
+    tone: "warn",
+    to: "/admin/kyc?status=CHANGES_REQUESTED",
+  },
+  {
+    key: "approved",
+    label: "Approved",
+    icon: CheckCircle2,
+    tone: "ok",
+    to: "/admin/kyc?status=APPROVED",
+  },
+  {
+    key: "rejected",
+    label: "Rejected",
+    icon: XCircle,
+    tone: "danger",
+    to: "/admin/kyc?status=REJECTED",
+  },
 ];
 
-const TONE_BG = {
-  info: "bg-info/10 text-info",
-  warn: "bg-warn/10 text-warn",
-  ok: "bg-ok/10 text-ok",
-  danger: "bg-danger/10 text-danger",
-};
-
-const usd = (value) =>
-  Number(value || 0).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-
 export default function OverviewPage() {
-  const { data, error, loading, reload } = useAsync(() => adminService.overview(), []);
+  const load = useCallback(() => adminService.overview(), []);
+  const { data, error, loading, reload } = useAsync(load, []);
+
+  const counts = data?.counts;
+  const recent = data?.recent || [];
+  const waiting = (counts?.pending || 0) + (counts?.underReview || 0);
 
   return (
     <>
-      <h1 className="text-[22px] font-semibold tracking-tight text-ink dark:text-ink-dark">
-        Overview
-      </h1>
+      <h1 className="text-[22px] font-semibold tracking-tight text-ink dark:text-ink-dark">Overview</h1>
       <p className="mt-1 text-[13.5px] text-ink-muted dark:text-ink-muted-dark">
-        Customers, cards and payments.
+        Identity verification, counted from the cases themselves.
       </p>
 
       {loading && (
-        <div className="mt-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
-          {Array.from({ length: 4 }).map((_, index) => (
-            <Skeleton key={index} className="h-[104px]" />
-          ))}
+        <div className="mt-6 flex flex-col gap-5">
+          <Skeleton className="h-[96px] w-full" />
+          <Skeleton className="h-[220px] w-full" />
         </div>
       )}
 
       {!loading && error && (
         <div className="mt-6">
-          {isUnavailable(error) ? (
-            <EmptyState title="The overview is not available yet" description="The figures on this screen have no source yet. Showing invented totals would misrepresent the business." dashed />
-          ) : (
-            <ErrorState title="Could not load the overview" message={error.message} onRetry={reload} />
-          )}
+          <ErrorState title="Could not load the overview" message={error.message} onRetry={reload} />
         </div>
       )}
 
-      {!loading && !error && data && (
-        <div className="mt-6 flex flex-col gap-5">
-          <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-            {TILES.map(({ key, label, icon: Icon, tone, to }) => (
-              <Link
-                key={key}
-                to={to}
-                className="rounded-panel border border-line dark:border-line-dark bg-panel dark:bg-panel-dark p-5 transition-colors hover:border-brand/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40"
-              >
-                <span className={`flex h-9 w-9 items-center justify-center rounded-field ${TONE_BG[tone]}`}>
-                  <Icon size={17} />
-                </span>
-                <p className="mt-3 text-[24px] font-semibold leading-none text-ink dark:text-ink-dark">
-                  {data.counts[key] ?? 0}
-                </p>
-                <p className="mt-1.5 text-[12.5px] text-ink-muted dark:text-ink-muted-dark">
-                  {label}
-                </p>
-              </Link>
-            ))}
+      {!loading && !error && counts && (
+        <>
+          {/* Needs attention, stated once and only when true. A banner that
+              is always on screen stops being read. */}
+          {waiting > 0 && (
+            <div className="mt-6 rounded-panel border border-warn/25 bg-warn/5 px-4 py-3">
+              <p className="text-[13.5px] text-ink dark:text-ink-dark">
+                <span className="font-semibold">{waiting}</span>{" "}
+                {waiting === 1 ? "customer is" : "customers are"} waiting on identity review.{" "}
+                <Link to="/admin/kyc?status=PENDING" className="font-medium text-brand hover:underline">
+                  Open the queue
+                </Link>
+              </p>
+            </div>
+          )}
+
+          <div className="mt-5 grid grid-cols-2 gap-4 lg:grid-cols-5">
+            {TILES.map((tile) => {
+              const Icon = tile.icon;
+              return (
+                <Link
+                  key={tile.key}
+                  to={tile.to}
+                  className="rounded-panel border border-line dark:border-line-dark bg-panel dark:bg-panel-dark p-4 transition-colors hover:border-brand/40"
+                >
+                  <span className={`inline-flex h-8 w-8 items-center justify-center rounded-full bg-${tile.tone}/10`}>
+                    <Icon size={15} className={`text-${tile.tone}`} aria-hidden="true" />
+                  </span>
+                  <p className="mt-3 font-mono text-[26px] leading-none text-ink dark:text-ink-dark">
+                    {counts[tile.key] ?? 0}
+                  </p>
+                  <p className="mt-1.5 text-[12.5px] text-ink-muted dark:text-ink-muted-dark">{tile.label}</p>
+                </Link>
+              );
+            })}
           </div>
 
-          <Panel title="Wallet balances" description="Across every customer in this browser.">
-            <p className="text-[24px] font-semibold leading-none text-ink dark:text-ink-dark tabular-nums">
-              {usd(data.totalBalanceUsd)} USD
-            </p>
-            <p className="mt-2 text-[12.5px] text-ink-faint">
-              No real funds are held anywhere.
-            </p>
-          </Panel>
+          <div className="mt-5">
+            <Panel
+              title="Recent cases"
+              description="Newest first. Open one to review its evidence."
+              padded={false}
+            >
+              {recent.length === 0 ? (
+                <EmptyState
+                  icon={Inbox}
+                  title="No cases yet"
+                  description="Submissions appear here as customers send them."
+                />
+              ) : (
+                <ul className="divide-y divide-line dark:divide-line-dark">
+                  {recent.map((row) => (
+                    <li key={row.id}>
+                      <Link
+                        to={`/admin/kyc/${row.id}`}
+                        className="flex items-center gap-3 px-5 py-4 hover:bg-panel-muted dark:hover:bg-white/[0.03]"
+                      >
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-[13.5px] font-medium text-ink dark:text-ink-dark">
+                            {row.customer?.name || row.customer?.email || "—"}
+                          </p>
+                          <p className="truncate text-[12px] text-ink-faint">
+                            {row.customer?.email} · v{row.version}
+                          </p>
+                        </div>
+                        <Badge tone={KYC_STATUS_TONE[row.kycStatus]}>
+                          {KYC_STATUS_LABEL[row.kycStatus] || row.kycStatus}
+                        </Badge>
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </Panel>
+          </div>
 
-          <Panel title="Recent payments" description="Newest first." padded={false}>
-            {data.recentPayments?.length ? (
-              <ul className="divide-y divide-line dark:divide-line-dark">
-                {data.recentPayments.map((item) => (
-                  <li key={item.id} className="flex items-start justify-between gap-4 px-5 py-3.5">
-                    <div className="min-w-0">
-                      <p className="text-[13.5px] text-ink dark:text-ink-dark">{item.label}</p>
-                      <p className="mt-0.5 text-[12px] text-ink-faint">
-                        {new Date(item.createdAt).toLocaleString()}
-                      </p>
-                    </div>
-                    <span
-                      className={`shrink-0 text-[13.5px] tabular-nums ${
-                        item.amountUsd < 0 ? "text-ink-muted dark:text-ink-muted-dark" : "text-ok"
-                      }`}
-                    >
-                      {item.amountUsd < 0 ? "" : "+"}
-                      {usd(item.amountUsd)} USD
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <EmptyState title="No payments yet" description="Transactions appear here." />
-            )}
-          </Panel>
-        </div>
+          {/* Said plainly rather than filled with placeholder charts. */}
+          <p className="mt-5 text-[12.5px] text-ink-faint">
+            Registration trends, payment volume, approval rate and review times are not measured yet. They
+            need period boundaries and aggregate queries that are not built, and a chart drawn without them
+            would not be a measurement.
+          </p>
+        </>
       )}
     </>
   );

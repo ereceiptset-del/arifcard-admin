@@ -33,6 +33,10 @@ const AdminCustomersPage = lazy(() => import("../pages/admin/CustomersPage"));
 const AdminCardsPage = lazy(() => import("../pages/admin/CardsPage"));
 const AdminPaymentsPage = lazy(() => import("../pages/admin/PaymentsPage"));
 const AdminSettingsPage = lazy(() => import("../pages/admin/SettingsPage"));
+const AdminTransactionsPage = lazy(() => import("../pages/admin/TransactionsPage"));
+const AdminNotificationsPage = lazy(() => import("../pages/admin/NotificationsPage"));
+const AdminAuditLogPage = lazy(() => import("../pages/admin/AuditLogPage"));
+const AdminCardOrdersPage = lazy(() => import("../pages/admin/CardOrdersPage"));
 const AdminKycQueuePage = lazy(() => import("../pages/admin/KycQueuePage"));
 const AdminKycCasePage = lazy(() => import("../pages/admin/KycCasePage"));
 
@@ -119,6 +123,10 @@ function AppRoutes() {
           <Route path="payments" element={<AdminPaymentsPage />} />
           <Route path="kyc" element={<AdminKycQueuePage />} />
           <Route path="kyc/:caseId" element={<AdminKycCasePage />} />
+          <Route path="card-orders" element={<AdminCardOrdersPage />} />
+          <Route path="transactions" element={<AdminTransactionsPage />} />
+          <Route path="notifications" element={<AdminNotificationsPage />} />
+          <Route path="audit" element={<AdminAuditLogPage />} />
           <Route path="settings" element={<AdminSettingsPage />} />
         </Route>
 

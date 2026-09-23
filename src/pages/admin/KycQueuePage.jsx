@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { Panel, Table, Badge, Skeleton, ErrorState, EmptyState, TextInput } from "@addiscard/ui";
-import { adminService, KYC_STATUS, KYC_STATUS_LABEL, KYC_STATUS_TONE } from "@addiscard/services";
+import { adminService, KYC_STATUS, KYC_STATUS_LABEL, KYC_STATUS_TONE, KYC_METHOD_LABEL } from "@addiscard/services";
 import { useAsync } from "../../hooks/useAsync.js";
 
 const FILTERS = [
@@ -53,7 +53,7 @@ export default function KycQueuePage() {
         </Link>
       ),
     },
-    { key: "method", header: "Method", render: (row) => (row.method === "MANUAL_FAYDA" ? "Manual Fayda" : row.method) },
+    { key: "method", header: "Method", render: (row) => KYC_METHOD_LABEL[row.method] || row.method },
     {
       key: "submittedAt",
       header: "Submitted",

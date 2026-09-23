@@ -21,6 +21,7 @@ import {
   KYC_STATUS_LABEL,
   KYC_STATUS_TONE,
   EVIDENCE_SLOTS,
+  KYC_METHOD_LABEL,
 } from "@addiscard/services";
 import { useAsync } from "../../hooks/useAsync.js";
 
@@ -369,7 +370,7 @@ export default function KycCasePage() {
             <Row label="Card purpose" value={details.cardPurpose} />
             <Row label="Annual income" value={details.annualIncome} />
             <Row label="Monthly income" value={details.monthlyIncome} />
-            <Row label="Method" value={record.method === "MANUAL_FAYDA" ? "Manual review by a person" : record.method} />
+            <Row label="Method" value={KYC_METHOD_LABEL[record.method] || record.method} />
             <Row
               label="Terms accepted"
               value={details.consentAcceptedAt ? new Date(details.consentAcceptedAt).toLocaleString() : "Not given"}

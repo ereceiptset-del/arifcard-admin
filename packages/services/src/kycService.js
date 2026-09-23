@@ -119,6 +119,19 @@ export const ACCEPTED_TYPES = ["image/jpeg", "image/png", "application/pdf"];
 /** Exactly two documents. No driver's licence. */
 export const DOCUMENT_TYPE = { FAYDA: "FAYDA", PASSPORT: "PASSPORT" };
 
+/**
+ * How a decision was reached, in words.
+ *
+ * One entry per document, because they are not the same claim: a passport
+ * review shown as "Manual Fayda" would misdescribe the evidence a
+ * decision rests on. Neither is an API verification — nothing contacts
+ * Fayda — and the wording says so.
+ */
+export const KYC_METHOD_LABEL = {
+  MANUAL_FAYDA: "Manual Fayda review",
+  MANUAL_PASSPORT: "Manual passport review",
+};
+
 /** What to call each upload, and the help text under it. */
 export const SLOT_COPY = {
   faydaFront: {
