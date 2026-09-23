@@ -1,4 +1,5 @@
 import { useCallback, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { Banknote, RefreshCw } from "lucide-react";
 import { Panel, Table, Badge, Button, ErrorState, EmptyState, Skeleton, useToast } from "@addiscard/ui";
 import { adminService, CLAIM_STATUS_LABEL, CLAIM_STATUS_TONE, birr, ApiError } from "@addiscard/services";
@@ -29,7 +30,24 @@ const FILTERS = [
 
 export default function PaymentsPage() {
   const toast = useToast();
-  const [status, setStatus] = useState("all");
+  /*
+   * The filter lives in the URL, not in component state.
+   *
+   * A KPI on the dashboard links here with a status already chosen, and
+   * that link has to actually filter — a tile that looks like it drills
+   * down and does not is worse than one that is plainly static. Keeping
+   * it in the URL also means a filtered view can be shared or reloaded
+   * and still show the same rows.
+   */
+  const [searchParams, setSearchParams] = useSearchParams();
+  const status = searchParams.get("status") || "all";
+  const setStatus = (next) => {
+    const params = new URLSearchParams(searchParams);
+    if (next === "all") params.delete("status");
+    else params.set("status", next);
+    setSearchParams(params, { replace: true });
+  };
+
   const [busyId, setBusyId] = useState(null);
 
   const load = useCallback(() => adminService.paymentClaims({ status }), [status]);

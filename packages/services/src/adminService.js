@@ -36,6 +36,9 @@ export const adminService = {
   customer: (uid, options) => backendApi.get(`/admin/customers/${uid}`, { ...options, auth: true }),
   staff: (options) => backendApi.get("/admin/staff", { ...options, auth: true }),
 
+  /** Whether each thing is configured. Never what it is configured to. */
+  settings: (options) => backendApi.get("/admin/settings", { ...options, auth: true }),
+
   kycCases: ({ status, q } = {}, options) => {
     const params = new URLSearchParams();
     if (status && status !== "all") params.set("status", status);
