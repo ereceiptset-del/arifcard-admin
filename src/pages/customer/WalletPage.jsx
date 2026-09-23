@@ -11,7 +11,8 @@ import {
   TextInput,
   Dialog,
 } from "@addiscard/ui";
-import { customerService, ApiError, isUnavailable } from "@addiscard/services";
+import { customerService, isUnavailable } from "@addiscard/services";
+import { PaymentDialog } from "../../components/payments/PaymentDialog.jsx";
 import { useAsync } from "../../hooks/useAsync.js";
 import { ServiceHoldNotice } from "../../components/ServiceHoldNotice.jsx";
 
@@ -20,128 +21,6 @@ const money = (value, currency = "USD") =>
 
 const etb = (value) =>
   `${Number(value).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ETB`;
-
-/**
- * Top-up quote dialog.
- *
- * The breakdown deliberately shows funding amount, exchange rate, service
- * fee, fixed fee and total on separate lines rather than one bundled
- * figure, so it is obvious what is being charged and why.
- *
- * Confirming is disabled: there is no payment rail in this prototype, and
- * a button that appeared to move money would be misleading.
- */
-function TopUpDialog({ open, onClose }) {
-  const [amount, setAmount] = useState("");
-  const [quote, setQuote] = useState(null);
-  const [error, setError] = useState("");
-  const [loading, setLoading] = useState(false);
-
-  const close = () => {
-    setAmount("");
-    setQuote(null);
-    setError("");
-    onClose();
-  };
-
-  const getQuote = async (event) => {
-    event.preventDefault();
-    setError("");
-    setQuote(null);
-
-    const parsed = Number(amount);
-    if (!Number.isFinite(parsed) || parsed <= 0) {
-      setError("Enter an amount greater than zero.");
-      return;
-    }
-
-    setLoading(true);
-    try {
-      setQuote(await customerService.quote({ amountUsd: parsed }));
-    } catch (problem) {
-      setError(problem instanceof ApiError ? problem.message : "Could not fetch a quote.");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  return (
-    <Dialog
-      open={open}
-      onClose={close}
-      title="Add money"
-      description="See what a top-up would cost."
-      footer={
-        <>
-          <Button variant="secondary" onClick={close}>
-            Close
-          </Button>
-          <Button
-            disabled
-            disabledReason="This prototype has no payment rail — no money can move."
-          >
-            Confirm top-up
-          </Button>
-        </>
-      }
-    >
-      <DemoNotice className="mb-4">
-        The rate and fees below are invented for the prototype. Nothing is charged and no funds
-        move.
-      </DemoNotice>
-
-      <form onSubmit={getQuote} className="flex items-end gap-2" noValidate>
-        <TextInput
-          label="Amount to fund"
-          type="number"
-          inputMode="decimal"
-          min="1"
-          step="1"
-          placeholder="50"
-          hint="In US dollars."
-          value={amount}
-          onChange={(event) => setAmount(event.target.value)}
-          error={error}
-          className="flex-1"
-        />
-        <Button type="submit" loading={loading} className="mb-[26px]">
-          Get quote
-        </Button>
-      </form>
-
-      {quote && (
-        <dl className="mt-5 rounded-panel border border-line dark:border-line-dark">
-          <Row label="Funding amount" value={money(quote.fundingAmountUsd)} />
-          <Row label="Exchange rate" value={`1 USD = ${quote.rateEtbPerUsd} ETB`} />
-          <Row label="Subtotal" value={etb(quote.subtotalEtb)} />
-          <Row label={`Service fee (${quote.serviceFeePercent}%)`} value={etb(quote.serviceFeeEtb)} />
-          <Row label="Fixed fee" value={etb(quote.fixedFeeEtb)} />
-          <Row label="Total to pay" value={etb(quote.totalEtb)} emphasis />
-          <div className="px-4 py-3">
-            <p className="text-[12px] text-ink-faint">{quote.disclaimer}</p>
-          </div>
-        </dl>
-      )}
-    </Dialog>
-  );
-}
-
-function Row({ label, value, emphasis }) {
-  return (
-    <div
-      className={`flex items-center justify-between gap-4 border-b border-line dark:border-line-dark px-4 py-2.5 last:border-b-0 ${
-        emphasis ? "bg-panel-muted dark:bg-white/[0.03]" : ""
-      }`}
-    >
-      <dt className={`text-[13px] ${emphasis ? "font-semibold text-ink dark:text-ink-dark" : "text-ink-muted dark:text-ink-muted-dark"}`}>
-        {label}
-      </dt>
-      <dd className={`font-mono text-[13px] ${emphasis ? "font-semibold text-ink dark:text-ink-dark" : "text-ink dark:text-ink-dark"}`}>
-        {value}
-      </dd>
-    </div>
-  );
-}
 
 export default function WalletPage() {
   const { data, error, loading, reload } = useAsync(() => customerService.wallet(), []);
@@ -256,7 +135,7 @@ export default function WalletPage() {
         </div>
       )}
 
-      <TopUpDialog open={topUpOpen} onClose={() => setTopUpOpen(false)} />
+      <PaymentDialog open={topUpOpen} onClose={() => setTopUpOpen(false)} />
     </>
   );
 }

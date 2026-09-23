@@ -15,3 +15,13 @@ export {
 export { featuresService, FEATURE_STATE } from "./featuresService.js";
 export { isUnavailable, FEATURE_UNAVAILABLE } from "./unavailable.js";
 export * from "./contracts.js";
+export {
+  paymentService,
+  PAYMENT_METHOD,
+  INTENT_STATUS,
+  CLAIM_STATUS,
+  CLAIM_STATUS_LABEL,
+  CLAIM_STATUS_TONE,
+  RETRYABLE,
+  birr,
+} from "./paymentService.js";
