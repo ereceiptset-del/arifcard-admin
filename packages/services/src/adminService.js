@@ -10,6 +10,30 @@ import { unavailable } from "./unavailable.js";
  */
 export const adminService = {
   overview: (options) => backendApi.get("/admin/overview", { ...options, auth: true }),
+
+  /**
+   * Counted from the records on every call.
+   *
+   * Metrics come back as `{ available, value }` or `{ available: false,
+   * reason }` rather than bare numbers, so a figure that could not be
+   * computed cannot be rendered as zero by accident.
+   */
+  analytics: ({ period = "7d", from, to, provider } = {}, options) => {
+    const params = new URLSearchParams({ period });
+    if (from) params.set("from", from);
+    if (to) params.set("to", to);
+    if (provider && provider !== "all") params.set("provider", provider);
+    return backendApi.get(`/admin/analytics?${params}`, { ...options, auth: true });
+  },
+
+  customers: ({ q, kycStatus } = {}, options) => {
+    const params = new URLSearchParams();
+    if (q) params.set("q", q);
+    if (kycStatus && kycStatus !== "all") params.set("kycStatus", kycStatus);
+    const query = params.toString();
+    return backendApi.get(`/admin/customers${query ? `?${query}` : ""}`, { ...options, auth: true });
+  },
+  customer: (uid, options) => backendApi.get(`/admin/customers/${uid}`, { ...options, auth: true }),
   staff: (options) => backendApi.get("/admin/staff", { ...options, auth: true }),
 
   kycCases: ({ status, q } = {}, options) => {
@@ -58,8 +82,8 @@ export const adminService = {
     return backendApi.get(`/admin/audit${query}`, { ...options, auth: true });
   },
 
-  // Not built. There is no ledger behind these yet, so they refuse rather
-  // than returning records that are not real.
+  // Not built. There is no ledger and no card provider behind these, so
+  // they refuse rather than returning records that are not real.
   cards: unavailable("Card records"),
   transactions: unavailable("Transactions"),
 };

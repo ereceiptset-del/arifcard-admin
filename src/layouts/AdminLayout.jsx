@@ -4,6 +4,7 @@ import {
   Users,
   ShieldCheck,
   CreditCard,
+  PackageOpen,
   Banknote,
   ArrowLeftRight,
   Bell,
