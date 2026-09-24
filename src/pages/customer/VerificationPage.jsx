@@ -394,7 +394,10 @@ export default function VerificationPage() {
               <div className="mt-5">
                 <Checkbox
                   checked={consent}
-                  onChange={(event) => setConsent(event.target.checked)}
+                  // Checkbox hands over the boolean, not the event — it
+                  // unwraps `event.target.checked` itself, unlike
+                  // TextInput and SelectInput which pass the event through.
+                  onChange={setConsent}
                   label="I accept the terms of service for identity verification and card issuance."
                 />
               </div>
