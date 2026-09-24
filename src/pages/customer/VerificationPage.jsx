@@ -38,6 +38,19 @@ import { EvidenceUpload } from "../../components/kyc/EvidenceUpload.jsx";
  * used, then everything together before it goes.
  */
 
+/**
+ * The latest birth date that is old enough today, as YYYY-MM-DD.
+ *
+ * Local date parts, not toISOString(): that converts to UTC first and can
+ * land on the wrong day near midnight.
+ */
+function latestBirthDate(minimumAge) {
+  const d = new Date();
+  d.setFullYear(d.getFullYear() - minimumAge);
+  const pad = (n) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+}
+
 const STEPS = ["Your document", "Your selfie", "Your details", "Card usage details", "Review and submit"];
 
 const emptyDetails = {
@@ -316,6 +329,13 @@ export default function VerificationPage() {
                   type="date"
                   value={form.dateOfBirth}
                   onChange={set("dateOfBirth")}
+                  // The picker opens on the current year, so a customer who
+                  // picks a day and month without changing the year ends up
+                  // "born" later this year — age -1 — and only finds out at
+                  // submit. Capping it at the latest qualifying date makes
+                  // that impossible to pick instead.
+                  min="1900-01-01"
+                  max={latestBirthDate(options?.minimumAge ?? 18)}
                   hint={`You must be at least ${options?.minimumAge ?? 18} to get a card.`}
                 />
               </div>

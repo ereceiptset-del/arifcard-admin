@@ -67,9 +67,14 @@ async function request(path, { method = "GET", body, signal, auth = false } = {}
   }
 
   if (!response.ok) {
+    // Carry every detail the server chose to send, not just the headline.
+    // Dropping `problems` here turned a precise answer — "you must be at
+    // least 18" — into a bare "Some details are still missing.", because
+    // the page only lists problems when this field is present.
     throw new ApiError(payload?.error?.message || "Request failed.", {
       status: response.status,
       code: payload?.error?.code,
+      problems: payload?.error?.problems,
     });
   }
 
