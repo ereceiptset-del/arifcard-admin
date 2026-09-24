@@ -102,19 +102,31 @@ function AppRoutes() {
           <Route path="settings" element={<CustomerSettingsPage />} />
         </Route>
 
-        {/* Signed-in admin area */}
+{/*
+          Signed-in admin area.
+
+          Guarded by RequireStaff *alone*, deliberately. ProtectedRoute
+          guards the customer area, and part of what it does there is send
+          staff away to /admin — so wrapping it around /admin as well made
+          the route redirect to itself forever: Navigate to /admin,
+          remount, still staff, Navigate to /admin. React Router unwinds
+          that loop by rendering nothing, which is why signing in as the
+          owner produced a blank white page and no error anyone could see.
+
+          RequireStaff already answers every question ProtectedRoute would
+          here — still loading, not signed in, signed in but not staff —
+          so nothing is lost by removing it.
+        */}
         <Route
           path="/admin"
           element={
-            <ProtectedRoute>
-              <RequireStaff>
-                <UiThemeProvider>
-                  <ToastProvider>
-                    <AdminLayout />
-                  </ToastProvider>
-                </UiThemeProvider>
-              </RequireStaff>
-            </ProtectedRoute>
+            <RequireStaff>
+              <UiThemeProvider>
+                <ToastProvider>
+                  <AdminLayout />
+                </ToastProvider>
+              </UiThemeProvider>
+            </RequireStaff>
           }
         >
           <Route index element={<AdminOverviewPage />} />
