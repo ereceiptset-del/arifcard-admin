@@ -41,8 +41,22 @@ function LoginForm() {
 
     setIsLoading(true);
     try {
-      await login(data);
-      const destination = location.state?.from?.pathname || "/customer";
+      const { user } = await login(data);
+
+      /*
+       * Staff land in the admin workspace, customers in their own.
+       *
+       * `isStaff` is resolved on the server from the Firebase claim and
+       * the active staff record — this only chooses which door to open,
+       * and every admin request is authorised again regardless. Sending
+       * everyone to /customer meant a reviewer signed in and had to know
+       * to type /admin themselves.
+       *
+       * A page they were bounced off still wins: if they followed a link
+       * to somewhere protected, that is where they were going.
+       */
+      const requested = location.state?.from?.pathname;
+      const destination = requested || (user?.isStaff ? "/admin" : "/customer");
       navigate(destination, { replace: true });
     } catch (err) {
       if (err instanceof ApiError && err.code === "EMAIL_NOT_VERIFIED") {
