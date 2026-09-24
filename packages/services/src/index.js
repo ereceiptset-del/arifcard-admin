@@ -21,10 +21,14 @@ export * from "./contracts.js";
 export {
   paymentService,
   PAYMENT_METHOD,
+  PAYMENT_STATUS,
+  PAYMENT_STATUS_LABEL,
+  PAYMENT_STATUS_TONE,
   INTENT_STATUS,
   CLAIM_STATUS,
   CLAIM_STATUS_LABEL,
   CLAIM_STATUS_TONE,
   RETRYABLE,
+  RETRYABLE_REASONS,
   birr,
 } from "./paymentService.js";

@@ -3,10 +3,11 @@ import { backendApi } from "./backendApi.js";
 /**
  * Payments by receipt token.
  *
- * The customer pays through CBE or Telebirr themselves, then gives us the
- * receipt number. Nothing here moves money, and nothing here can tell the
- * customer their balance changed — verifying a receipt and crediting an
- * account are different things, and only the first exists.
+ * The customer pays through CBE or Telebirr themselves, then tells us
+ * what they paid and gives us the receipt token. The server reads the
+ * receipt from the provider and decides; this client only ever sends the
+ * token and the customer's account of the payment — never a URL, and
+ * never a status.
  */
 
 export const PAYMENT_METHOD = {
@@ -14,57 +15,50 @@ export const PAYMENT_METHOD = {
   TELEBIRR: "TELEBIRR",
 };
 
-export const INTENT_STATUS = {
-  AWAITING_CLAIM: "AWAITING_CLAIM",
-  CLAIMED: "CLAIMED",
+/** A payment's status. Set by the server only. */
+export const PAYMENT_STATUS = {
+  AWAITING_PAYMENT: "AWAITING_PAYMENT",
+  VERIFYING: "VERIFYING",
+  VERIFIED: "VERIFIED",
+  REQUIRES_REVIEW: "REQUIRES_REVIEW",
+  REJECTED_EVIDENCE: "REJECTED_EVIDENCE",
   CANCELLED: "CANCELLED",
   EXPIRED: "EXPIRED",
 };
 
-export const CLAIM_STATUS = {
-  SUBMITTED: "SUBMITTED",
-  CHECKING: "CHECKING",
-  VERIFIED: "VERIFIED",
-  MISMATCHED: "MISMATCHED",
-  NOT_FOUND: "NOT_FOUND",
-  UNREADABLE: "UNREADABLE",
-  PROVIDER_ERROR: "PROVIDER_ERROR",
-  REJECTED: "REJECTED",
-};
+/** Kept as names for older imports; payments and claims share statuses. */
+export const INTENT_STATUS = PAYMENT_STATUS;
+export const CLAIM_STATUS = PAYMENT_STATUS;
 
-export const CLAIM_STATUS_LABEL = {
-  SUBMITTED: "Checking",
-  CHECKING: "Checking",
-  VERIFIED: "Receipt matched",
-  MISMATCHED: "Does not match",
-  NOT_FOUND: "Receipt not found",
-  UNREADABLE: "Needs a person",
-  PROVIDER_ERROR: "Could not reach provider",
-  REJECTED: "Rejected",
+export const PAYMENT_STATUS_LABEL = {
+  AWAITING_PAYMENT: "Awaiting payment",
+  VERIFYING: "Verifying",
+  VERIFIED: "Verified",
+  REQUIRES_REVIEW: "With our team",
+  REJECTED_EVIDENCE: "Receipt not accepted",
+  CANCELLED: "Cancelled",
+  EXPIRED: "Expired",
 };
+export const CLAIM_STATUS_LABEL = PAYMENT_STATUS_LABEL;
 
 /** Tones are the Badge palette's own names, so a typo renders unstyled. */
-export const CLAIM_STATUS_TONE = {
-  SUBMITTED: "neutral",
-  CHECKING: "neutral",
+export const PAYMENT_STATUS_TONE = {
+  AWAITING_PAYMENT: "neutral",
+  VERIFYING: "info",
   VERIFIED: "ok",
-  MISMATCHED: "warn",
-  NOT_FOUND: "warn",
-  UNREADABLE: "warn",
-  // Ours to fix, not the customer's — informational rather than a warning
-  // aimed at them.
-  PROVIDER_ERROR: "info",
-  REJECTED: "danger",
+  REQUIRES_REVIEW: "info",
+  REJECTED_EVIDENCE: "danger",
+  CANCELLED: "neutral",
+  EXPIRED: "neutral",
 };
+export const CLAIM_STATUS_TONE = PAYMENT_STATUS_TONE;
 
 /**
- * Which outcomes the customer can do something about themselves.
- *
- * A provider we could not reach, or a number that matched nothing, are
- * worth another go. A receipt for the wrong amount is not — retrying it
- * would produce the same answer and waste the customer's time.
+ * Reasons after which "check again" can help: the provider was
+ * unreachable. Everything else needs a different receipt or a person.
  */
-export const RETRYABLE = [CLAIM_STATUS.NOT_FOUND, CLAIM_STATUS.PROVIDER_ERROR];
+export const RETRYABLE_REASONS = ["SOURCE_UNAVAILABLE", "PROVIDER_NOT_CONFIGURED"];
+export const RETRYABLE = [PAYMENT_STATUS.VERIFYING];
 
 /** Cents to a birr string. The server is the only place that does maths. */
 export const birr = (minor) =>
@@ -89,8 +83,16 @@ export const paymentService = {
   cancelIntent: (intentId) =>
     backendApi.post(`/payments/intents/${intentId}/cancel`, undefined, { auth: true }),
 
-  submitClaim: (intentId, token) =>
-    backendApi.post(`/payments/intents/${intentId}/claims`, { token }, { auth: true }),
+  /**
+   * The customer's account of the payment, and the receipt token last.
+   * Only the token identifies the receipt; the server builds the URL.
+   */
+  submitClaim: (intentId, { payerName, payerPhone, payerAccount, claimedAmountBirr, claimedPaidAt, message, token }) =>
+    backendApi.post(
+      `/payments/intents/${intentId}/claims`,
+      { payerName, payerPhone, payerAccount, claimedAmountBirr, claimedPaidAt, message, token },
+      { auth: true }
+    ),
 
   recheckClaim: (claimId) =>
     backendApi.post(`/payments/claims/${claimId}/recheck`, undefined, { auth: true }),

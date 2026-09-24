@@ -79,6 +79,16 @@ export const adminService = {
     backendApi.get(`/admin/payments/claims/${claimId}`, { ...options, auth: true }),
   recheckClaim: (claimId) =>
     backendApi.post(`/admin/payments/claims/${claimId}/recheck`, undefined, { auth: true }),
+  /**
+   * Verify, reject or ask for clarification. Reason required; the server
+   * checks role, self-review and duplicates. There is no "set status".
+   */
+  decidePaymentClaim: (claimId, { action, reason, customerMessage, canonicalTransactionId }) =>
+    backendApi.post(
+      `/admin/payments/claims/${claimId}/decision`,
+      { action, reason, customerMessage, canonicalTransactionId },
+      { auth: true }
+    ),
 
   auditLog: ({ action } = {}, options) => {
     const query = action && action !== "all" ? `?action=${encodeURIComponent(action)}` : "";

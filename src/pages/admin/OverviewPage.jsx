@@ -168,8 +168,8 @@ export default function OverviewPage() {
                 )}
                 {(payments?.needsReview.value || 0) > 0 && (
                   <li>
-                    <Link to="/admin/payments?status=UNREADABLE" className="text-brand hover:underline">
-                      {payments.needsReview.value} receipt(s) could not be read
+                    <Link to="/admin/payments?status=REQUIRES_REVIEW" className="text-brand hover:underline">
+                      {payments.needsReview.value} payment(s) need a person
                     </Link>
                   </li>
                 )}
@@ -227,9 +227,9 @@ export default function OverviewPage() {
             Receipts needing a person <span className="font-normal text-ink-faint">— right now</span>
           </h2>
           <div className="mt-3 grid grid-cols-2 gap-4 lg:grid-cols-4">
-            <Metric label="Could not be read" metric={payments.needsReview} to="/admin/payments?status=UNREADABLE" tone={payments.needsReview.value > 0 ? "warn" : "neutral"} />
+            <Metric label="Needs a person" metric={payments.needsReview} to="/admin/payments?status=REQUIRES_REVIEW" tone={payments.needsReview.value > 0 ? "warn" : "neutral"} />
             <Metric label="Still checking" metric={payments.verifying} />
-            <Metric label="Already-used receipts" metric={payments.duplicateRejected} hint="a customer re-submitting — not a bank failure" />
+            <Metric label="Already-allocated transactions" metric={payments.duplicateRejected} hint="a transaction presented again — never credited twice" />
             <Metric label="Provider unreachable" metric={payments.providerFailures} hint="ours to retry, not the customer's fault" />
           </div>
 
