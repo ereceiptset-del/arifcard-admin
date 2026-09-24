@@ -2,15 +2,27 @@ import { Navigate, useLocation } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 
 /**
- * ProtectedRoute
- * 
- * Guards private routes. If the user authentication state is still loading
- * from session rehydration, shows an understated branded spinner.
- * If unauthenticated, navigates to /login with the intended destination
- * saved in route state.
+ * Guards the customer application.
+ *
+ * Two separate questions, answered in order.
+ *
+ * **Are we still finding out?** While the session is being rehydrated
+ * nothing renders — returning early rather than optimistically, so no
+ * private screen appears before the answer is known.
+ *
+ * **Is this a customer at all?** Staff are sent to their own workspace.
+ * An owner or reviewer is not a customer: they have no wallet, no
+ * verification of their own to complete, and the screens here would
+ * either be empty or invite them to start a case they are not allowed to
+ * review. Sending them to `/admin` keeps each account in one place, and
+ * removes the trap of an owner submitting a case only to find that
+ * self-review is refused.
+ *
+ * Authorization still lives on the server. This chooses which workspace
+ * to show; it does not decide what anyone may read or do.
  */
 export default function ProtectedRoute({ children }) {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { user, isAuthenticated, isLoading } = useAuth();
   const location = useLocation();
 
   if (isLoading) {
@@ -28,6 +40,10 @@ export default function ProtectedRoute({ children }) {
 
   if (!isAuthenticated) {
     return <Navigate to="/login" state={{ from: location }} replace />;
+  }
+
+  if (user?.isStaff) {
+    return <Navigate to="/admin" replace />;
   }
 
   return children;
