@@ -35,8 +35,9 @@ const METHOD_LABEL = {
 const TOKEN_HELP = {
   [PAYMENT_METHOD.CBE]: {
     label: "CBE receipt code",
-    placeholder: "v2-…",
-    hint: "The code at the end of your CBE receipt link, starting with v2-. Copy it exactly: capital letters matter. Paste only the code, not the whole link.",
+    placeholder: "v2-… or FT…&…",
+    hint:
+      "The code at the end of your CBE receipt link: from the CBE app it starts with v2-; from a branch receipt it looks like FT26175ABCDE&12345678. Copy it exactly — capital letters matter — and paste only the code, not the whole link.",
   },
   [PAYMENT_METHOD.TELEBIRR]: {
     label: "Telebirr transaction number",
