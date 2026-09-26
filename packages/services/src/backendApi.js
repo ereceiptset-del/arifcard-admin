@@ -12,9 +12,21 @@ import { ApiError } from "./apiClient.js";
 const DEFAULT_BASE_URL = "http://localhost:4000/api";
 const TOKEN_STORAGE_KEY = "addiscard_token";
 
+/**
+ * Where the API is.
+ *
+ * VITE_API_BASE_URL is the one setting for every API call — the sign-in
+ * client (src/services/api.js) reads it too, and production sets it to
+ * "/api" (Firebase Hosting rewrites that to the backend function).
+ * VITE_BACKEND_API_URL still wins if someone sets it deliberately.
+ *
+ * Before this, production builds had no VITE_BACKEND_API_URL, so every
+ * screen after sign-in called http://localhost:4000 — the visitor's own
+ * computer — while sign-in itself worked.
+ */
 function baseUrl() {
   try {
-    return import.meta.env?.VITE_BACKEND_API_URL || DEFAULT_BASE_URL;
+    return import.meta.env?.VITE_BACKEND_API_URL || import.meta.env?.VITE_API_BASE_URL || DEFAULT_BASE_URL;
   } catch {
     return DEFAULT_BASE_URL;
   }
