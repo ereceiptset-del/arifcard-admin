@@ -5,6 +5,8 @@ import {
   adminService,
   ISSUER_ONBOARDING_LABEL,
   ISSUER_ONBOARDING_TONE,
+  PAYMENT_STATUS_LABEL,
+  PAYMENT_STATUS_TONE,
   KYC_STATUS,
   KYC_STATUS_LABEL,
   KYC_STATUS_TONE,
@@ -237,7 +239,7 @@ function CustomerDialog({ uid, onClose }) {
                     <span className="min-w-0 flex-1 truncate font-mono text-[12px]">{p.reference}</span>
                     <span className="shrink-0 text-[12px] text-ink-faint">{p.method}</span>
                     <span className="shrink-0 font-mono text-[12.5px]">{birr(p.amountMinor)}</span>
-                    <Badge tone="neutral">{p.status}</Badge>
+                    <Badge tone={PAYMENT_STATUS_TONE[p.status] || "neutral"}>{PAYMENT_STATUS_LABEL[p.status] || p.status}</Badge>
                   </li>
                 ))}
               </ul>

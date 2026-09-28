@@ -35,6 +35,9 @@ const NAV_ITEMS = [
   { label: "Settings", to: "/admin/settings", icon: Settings },
 ];
 
+/** The signed-in staff member's role, as the backend reports it. */
+const STAFF_ROLE_LABEL = { owner: "Owner", admin: "Administrator", reviewer: "Reviewer" };
+
 /** Signed-in admin chrome. */
 export default function AdminLayout() {
   const { user, logout } = useAuth();
@@ -53,14 +56,14 @@ export default function AdminLayout() {
       NavLinkComponent={NavLink}
       account={{ name: user?.fullName || "Admin", secondary: user?.email }}
       onSignOut={handleSignOut}
-      topBarExtras={<Badge tone="warn">No access control</Badge>}
+      topBarExtras={<Badge tone="neutral">{STAFF_ROLE_LABEL[user?.staffRole] || "Staff"}</Badge>}
       banner={
         <div className="border-b border-line dark:border-line-dark bg-panel-muted dark:bg-panel-dark px-4 sm:px-6 py-3">
           <div className="mx-auto max-w-content">
             <DemoNotice>
-              There is no staff permission check yet: any account that can sign in can open this
-              area. The records these screens read do not exist yet, so they show nothing rather
-              than invented figures.
+              Staff only: every request here is checked against your active staff record, and
+              customers are refused. Screens whose records do not exist yet (such as card
+              transactions) show nothing rather than invented figures.
             </DemoNotice>
           </div>
         </div>
