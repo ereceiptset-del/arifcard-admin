@@ -41,6 +41,20 @@ export const adminService = {
   /** Reads the state back from the issuer now. Administrators only (enforced by the backend). */
   refreshIssuerOnboarding: (uid) =>
     backendApi.post(`/admin/provider/customers/${encodeURIComponent(uid)}/refresh`, undefined, { auth: true }),
+
+  /**
+   * Programme funding (USDC collateral at the issuer). Nothing here sends
+   * funds: create fetches the deposit instruction and records what is
+   * expected; sync reads the issuer's identified deposits.
+   */
+  issuerFunding: (uid, options) =>
+    backendApi.get(`/admin/provider/customers/${encodeURIComponent(uid)}/funding`, { ...options, auth: true }),
+  createIssuerFunding: (uid, { expectedUsdc, coin, network }) =>
+    backendApi.post(`/admin/provider/customers/${encodeURIComponent(uid)}/funding`, { expectedUsdc, coin, network }, { auth: true }),
+  syncIssuerFunding: (fundingId) =>
+    backendApi.post(`/admin/provider/funding/${encodeURIComponent(fundingId)}/sync`, undefined, { auth: true }),
+  resolveIssuerFunding: (fundingId, { resolution, reason }) =>
+    backendApi.post(`/admin/provider/funding/${encodeURIComponent(fundingId)}/resolve`, { resolution, reason }, { auth: true }),
   staff: (options) => backendApi.get("/admin/staff", { ...options, auth: true }),
 
   /** Whether each thing is configured. Never what it is configured to. */

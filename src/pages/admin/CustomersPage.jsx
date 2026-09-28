@@ -12,6 +12,7 @@ import {
   birr,
 } from "@addiscard/services";
 import { useAsync } from "../../hooks/useAsync.js";
+import IssuerFunding from "../../components/admin/IssuerFunding.jsx";
 
 /**
  * Customers.
@@ -248,6 +249,8 @@ function CustomerDialog({ uid, onClose }) {
           </div>
 
           <IssuerOnboarding uid={uid} />
+
+          <IssuerFunding uid={uid} />
 
           <div className="flex justify-end">
             <Button variant="secondary" icon={X} onClick={onClose}>
