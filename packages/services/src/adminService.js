@@ -34,6 +34,13 @@ export const adminService = {
     return backendApi.get(`/admin/customers${query ? `?${query}` : ""}`, { ...options, auth: true });
   },
   customer: (uid, options) => backendApi.get(`/admin/customers/${uid}`, { ...options, auth: true }),
+
+  /** Card-issuer onboarding for one customer — separate from Arifcard's KYC. */
+  issuerOnboarding: (uid, options) =>
+    backendApi.get(`/admin/provider/customers/${encodeURIComponent(uid)}`, { ...options, auth: true }),
+  /** Reads the state back from the issuer now. Administrators only (enforced by the backend). */
+  refreshIssuerOnboarding: (uid) =>
+    backendApi.post(`/admin/provider/customers/${encodeURIComponent(uid)}/refresh`, undefined, { auth: true }),
   staff: (options) => backendApi.get("/admin/staff", { ...options, auth: true }),
 
   /** Whether each thing is configured. Never what it is configured to. */

@@ -16,6 +16,12 @@ export {
   SLOT_COPY,
 } from "./kycService.js";
 export { featuresService, FEATURE_STATE } from "./featuresService.js";
+export {
+  cardIssuerService,
+  ISSUER_KYC_ORIGINS,
+  ISSUER_ONBOARDING_LABEL,
+  ISSUER_ONBOARDING_TONE,
+} from "./cardIssuerService.js";
 export { isUnavailable, FEATURE_UNAVAILABLE } from "./unavailable.js";
 export * from "./contracts.js";
 export {

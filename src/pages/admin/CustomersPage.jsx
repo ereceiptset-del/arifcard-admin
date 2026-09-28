@@ -1,8 +1,10 @@
 import { useCallback, useState } from "react";
-import { Users, X } from "lucide-react";
-import { Panel, Table, Badge, ErrorState, EmptyState, Skeleton, TextInput, Dialog, Button } from "@addiscard/ui";
+import { Users, X, RefreshCw } from "lucide-react";
+import { Panel, Table, Badge, ErrorState, EmptyState, Skeleton, TextInput, Dialog, Button, useToast } from "@addiscard/ui";
 import {
   adminService,
+  ISSUER_ONBOARDING_LABEL,
+  ISSUER_ONBOARDING_TONE,
   KYC_STATUS,
   KYC_STATUS_LABEL,
   KYC_STATUS_TONE,
@@ -245,6 +247,8 @@ function CustomerDialog({ uid, onClose }) {
             )}
           </div>
 
+          <IssuerOnboarding uid={uid} />
+
           <div className="flex justify-end">
             <Button variant="secondary" icon={X} onClick={onClose}>
               Close
@@ -253,6 +257,63 @@ function CustomerDialog({ uid, onClose }) {
         </div>
       )}
     </Dialog>
+  );
+}
+
+/**
+ * The customer's onboarding with the card issuer. Deliberately its own
+ * section, apart from "Identity history": Arifcard's review and the
+ * issuer's verification are two different decisions, by two different
+ * parties, and neither changes the other. Staff can read it and an
+ * administrator can ask the issuer again — nobody can set it.
+ */
+function IssuerOnboarding({ uid }) {
+  const toast = useToast();
+  const load = useCallback(() => adminService.issuerOnboarding(uid), [uid]);
+  const { data, error, loading, setData } = useAsync(load, [uid]);
+  const [refreshing, setRefreshing] = useState(false);
+  const o = data?.onboarding;
+
+  const refresh = async () => {
+    setRefreshing(true);
+    try {
+      const result = await adminService.refreshIssuerOnboarding(uid);
+      setData({ onboarding: result.onboarding });
+      toast.success(result.refreshed ? "Checked with the card issuer." : `Not checked: ${result.reason || "unavailable"}.`);
+    } catch (problem) {
+      toast.error(problem?.message || "Could not check with the card issuer.");
+    } finally {
+      setRefreshing(false);
+    }
+  };
+
+  return (
+    <div>
+      <div className="flex items-center justify-between gap-3">
+        <p className="text-[13px] font-medium text-ink dark:text-ink-dark">Card issuer onboarding</p>
+        {o && (
+          <Button variant="secondary" size="sm" icon={RefreshCw} loading={refreshing} onClick={refresh}>
+            Check with issuer
+          </Button>
+        )}
+      </div>
+      {loading && <Skeleton className="mt-2 h-[80px] w-full" />}
+      {!loading && error && <p className="mt-2 text-[12.5px] text-danger">{error.message}</p>}
+      {!loading && o && (
+        <dl className="mt-2 rounded-panel border border-line dark:border-line-dark">
+          <Row label="State" value={<Badge tone={ISSUER_ONBOARDING_TONE[o.state]}>{ISSUER_ONBOARDING_LABEL[o.state] || o.state}</Badge>} />
+          <Row label="Application status" value={o.applicationStatus || "—"} mono />
+          {o.applicationReason && <Row label="Reason codes" value={o.applicationReason} mono />}
+          <Row label="Session" value={o.session ? `${o.session.status}${o.session.resumable ? "" : " (not resumable)"}` : "—"} mono />
+          <Row label="Our reference" value={o.externalUserId || "—"} mono />
+          <Row label="Issuer user id" value={o.providerUserId || "—"} mono />
+          <Row label="Last event" value={o.lastEventAt ? new Date(o.lastEventAt).toLocaleString() : "—"} />
+          <Row label="Last checked" value={o.lastRefreshedAt ? new Date(o.lastRefreshedAt).toLocaleString() : "—"} />
+          {o.correlationProblem && <Row label="Correlation problem" value={o.correlationProblem} />}
+          {o.gateBlocks?.length > 0 && <Row label="Blocked by" value={o.gateBlocks.map((b) => b.reason).join(" ")} />}
+        </dl>
+      )}
+    </div>
   );
 }
 

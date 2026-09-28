@@ -17,6 +17,7 @@ import {
   CARD_STATUS_LABEL,
   CARD_STATUS_TONE, isUnavailable } from "@addiscard/services";
 import { useAsync } from "../../hooks/useAsync.js";
+import IssuerOnboardingPanel from "../../components/cards/IssuerOnboardingPanel.jsx";
 
 /** Masked card face. Real PANs never exist in this prototype. */
 function CardFace({ card }) {
@@ -158,6 +159,10 @@ export default function CardsPage() {
         >
           New card
         </Button>
+      </div>
+
+      <div className="mt-6">
+        <IssuerOnboardingPanel />
       </div>
 
       {loading && (
