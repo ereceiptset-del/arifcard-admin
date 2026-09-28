@@ -1,97 +1,70 @@
-import { useState } from "react";
-import { Plus, CreditCard, Snowflake, Play, Eye } from "lucide-react";
-import {
-  Panel,
-  Button,
-  Badge,
-  Skeleton,
-  ErrorState,
-  EmptyState,
-  DemoNotice,
-  useToast,
-} from "@addiscard/ui";
-import {
-  customerService,
-  ApiError,
-  CARD_STATUS,
-  CARD_STATUS_LABEL,
-  CARD_STATUS_TONE, isUnavailable } from "@addiscard/services";
+import { useCallback, useState } from "react";
+import { CreditCard, Plus, RefreshCw, Send } from "lucide-react";
+import { Panel, Button, Badge, Skeleton, ErrorState, EmptyState, SelectInput, useToast } from "@addiscard/ui";
+import { cardIssuerService, ApiError, CARD_ORDER_LABEL, CARD_ORDER_TONE, birr } from "@addiscard/services";
 import { useAsync } from "../../hooks/useAsync.js";
 import IssuerOnboardingPanel from "../../components/cards/IssuerOnboardingPanel.jsx";
 
-/** Masked card face. Real PANs never exist in this prototype. */
-function CardFace({ card }) {
-  const frozen = card.status === CARD_STATUS.FROZEN;
-  const pending = card.status === CARD_STATUS.PENDING;
+/**
+ * Cards.
+ *
+ * Three separate steps, each decided by the backend from its own records:
+ * verification with the card issuer (the panel at the top), a card order
+ * paid by one of the customer's verified payments, and issuance once our
+ * team has funded the card at the issuer. Nothing on this page decides a
+ * status, and no card number, CVC or PIN is ever shown here.
+ */
 
+/** Masked card face: the last four digits and expiry, nothing else. */
+function CardFace({ card }) {
   return (
-    <div
-      className={`relative w-full max-w-[340px] rounded-panel border border-white/10 bg-[#101217] p-5 ${
-        frozen || pending ? "opacity-70" : ""
-      }`}
-    >
+    <div className={`relative w-full max-w-[340px] rounded-panel border border-white/10 bg-[#101217] p-5 ${card.ready ? "" : "opacity-80"}`}>
       <div className="flex items-start justify-between">
         <span className="text-[13px] font-semibold text-white/90">Arifcard</span>
-        <Badge tone={CARD_STATUS_TONE[card.status]}>{CARD_STATUS_LABEL[card.status]}</Badge>
+        <Badge tone={card.ready ? "ok" : "neutral"}>{card.ready ? "Ready" : card.status === "notActivated" ? "Not activated" : card.status}</Badge>
       </div>
-
-      <p className="mt-7 font-mono text-[15px] tracking-[0.18em] text-white/90">
-        •••• •••• •••• {card.last4}
-      </p>
-
-      <div className="mt-5 flex items-end justify-between">
-        <div className="font-mono text-[9px] uppercase tracking-wider text-ink-faint">
+      <p className="mt-7 font-mono text-[15px] tracking-[0.18em] text-white/90">•••• •••• •••• {card.last4 || "····"}</p>
+      <div className="mt-5 flex items-end justify-between font-mono text-[9px] uppercase tracking-wider text-ink-faint">
+        <div>
           <p>Expires</p>
-          <p className="mt-0.5 text-white/80">{card.expiry}</p>
+          <p className="mt-0.5 text-white/80">{card.expiry || "—"}</p>
         </div>
-        <div className="font-mono text-[9px] uppercase tracking-wider text-ink-faint text-right">
-          <p>Balance</p>
-          <p className="mt-0.5 text-white/80">
-            {Number(card.balanceUsd).toFixed(2)} USD
-          </p>
+        <div className="text-right">
+          <p>Limit</p>
+          <p className="mt-0.5 text-white/80">{card.limitUsd ? `${card.limitUsd} USD` : "—"}</p>
         </div>
       </div>
-
-      {(frozen || pending) && (
-        <p className="mt-4 text-[11.5px] text-white/60">
-          {frozen ? "Frozen. Payments are declined until you unfreeze." : "Pending activation."}
-        </p>
-      )}
+      {!card.ready && <p className="mt-4 text-[11.5px] text-white/60">Issued. It becomes ready once the issuer activates it.</p>}
     </div>
   );
 }
 
-function CardRow({ card, onToggleFreeze, busyId }) {
-  const pending = card.status === CARD_STATUS.PENDING;
-  const frozen = card.status === CARD_STATUS.FROZEN;
-  const busy = busyId === card.id;
-
+function OrderRow({ order, onIssue, onRefresh, busy }) {
   return (
     <div className="flex flex-col gap-4 border-b border-line dark:border-line-dark px-5 py-5 last:border-b-0 sm:flex-row sm:items-center sm:justify-between">
-      <CardFace card={card} />
-
-      <div className="flex flex-wrap gap-2 sm:flex-col sm:items-stretch">
-        <Button
-          variant="secondary"
-          size="sm"
-          icon={Eye}
-          disabled
-          disabledReason="Card details are not generated in this prototype."
-        >
-          View details
-        </Button>
-
-        <Button
-          variant="secondary"
-          size="sm"
-          icon={frozen ? Play : Snowflake}
-          loading={busy}
-          disabled={pending}
-          disabledReason={pending ? "A pending card cannot be frozen yet." : undefined}
-          onClick={() => onToggleFreeze(card)}
-        >
-          {frozen ? "Unfreeze" : "Freeze"}
-        </Button>
+      <div className="min-w-0">
+        <div className="flex flex-wrap items-center gap-2">
+          <Badge tone={CARD_ORDER_TONE[order.status]}>{CARD_ORDER_LABEL[order.status] || order.status}</Badge>
+          {order.paymentReference && <span className="font-mono text-[12px] text-ink-faint">{order.paymentReference}</span>}
+        </div>
+        <p className="mt-2 text-[13px] text-ink dark:text-ink-dark">{order.message}</p>
+        {order.card && (
+          <div className="mt-4">
+            <CardFace card={order.card} />
+          </div>
+        )}
+      </div>
+      <div className="flex shrink-0 flex-wrap gap-2 sm:flex-col sm:items-stretch">
+        {order.canIssue && (
+          <Button icon={Send} loading={busy === `issue-${order.id}`} onClick={() => onIssue(order)}>
+            Issue my card
+          </Button>
+        )}
+        {order.card && !order.card.ready && (
+          <Button variant="secondary" size="sm" icon={RefreshCw} loading={busy === `refresh-${order.id}`} onClick={() => onRefresh(order)}>
+            Check card
+          </Button>
+        )}
       </div>
     </div>
   );
@@ -99,119 +72,84 @@ function CardRow({ card, onToggleFreeze, busyId }) {
 
 export default function CardsPage() {
   const toast = useToast();
-  const [busyId, setBusyId] = useState(null);
-  const [creating, setCreating] = useState(false);
+  const load = useCallback(() => cardIssuerService.cardOrders(), []);
+  const { data, error, loading, reload } = useAsync(load, []);
+  const [paymentId, setPaymentId] = useState("");
+  const [busy, setBusy] = useState(null);
 
-  const { data, error, loading, reload, setData } = useAsync(
-    () => customerService.overview(),
-    []
-  );
-
-  const cards = data?.cards || [];
-
-  const createCard = async () => {
-    setCreating(true);
+  const run = async (key, fn, success) => {
+    setBusy(key);
     try {
-      const { card } = await customerService.createCard();
-      setData((current) => ({ ...current, cards: [...(current?.cards || []), card] }));
-      toast.success("Demo card created. It starts as pending.");
+      await fn();
+      if (success) toast.success(success);
     } catch (problem) {
-      toast.error(problem instanceof ApiError ? problem.message : "Could not create the card.");
+      toast.error(problem instanceof ApiError ? problem.message : "That did not work. Try again.");
     } finally {
-      setCreating(false);
+      setBusy(null);
+      reload();
     }
   };
 
-  const toggleFreeze = async (card) => {
-    setBusyId(card.id);
-    try {
-      const { card: updated } = await customerService.toggleFreeze(card.id);
-      setData((current) => ({
-        ...current,
-        cards: current.cards.map((item) => (item.id === updated.id ? updated : item)),
-      }));
-      toast.success(
-        updated.status === CARD_STATUS.FROZEN ? "Card frozen." : "Card unfrozen."
-      );
-    } catch (problem) {
-      toast.error(problem instanceof ApiError ? problem.message : "Could not update the card.");
-    } finally {
-      setBusyId(null);
-    }
-  };
+  const orders = data?.orders || [];
+  const payments = data?.eligiblePayments || [];
 
   return (
     <>
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <h1 className="text-[22px] font-semibold tracking-tight text-ink dark:text-ink-dark">
-            Cards
-          </h1>
-          <p className="mt-1 text-[13.5px] text-ink-muted dark:text-ink-muted-dark">
-            Virtual USD cards, funded from your wallet.
-          </p>
-        </div>
-        <Button
-          icon={Plus}
-          loading={creating}
-          onClick={createCard}
-          className="shrink-0"
-        >
-          New card
-        </Button>
+      <div>
+        <h1 className="text-[22px] font-semibold tracking-tight text-ink dark:text-ink-dark">Cards</h1>
+        <p className="mt-1 text-[13.5px] text-ink-muted dark:text-ink-muted-dark">Virtual USD cards, issued by our card issuer.</p>
       </div>
 
       <div className="mt-6">
         <IssuerOnboardingPanel />
       </div>
 
-      {loading && (
-        <div className="mt-6 flex flex-col gap-5">
-          <Skeleton className="h-[86px] w-full" />
-          <Skeleton className="h-[240px] w-full" />
-        </div>
-      )}
-
+      {loading && <Skeleton className="mt-6 h-[160px] w-full" />}
       {!loading && error && (
         <div className="mt-6">
-          {isUnavailable(error) ? (
-            <EmptyState title="Cards are not available yet" description="Card issuing is not built. Nothing is shown here rather than a placeholder card that is not yours." dashed />
-          ) : (
-            <ErrorState title="Could not load your cards" message={error.message} onRetry={reload} />
-          )}
+          <ErrorState title="Could not load your card orders" message={error.message} onRetry={reload} />
         </div>
       )}
 
       {!loading && !error && data && (
         <div className="mt-6 flex flex-col gap-5">
-          <DemoNotice>
-            Card issuing is not built. No card number is generated, nothing is issued, and no
-            payment network is involved.
-          </DemoNotice>
+          {payments.length > 0 && (
+            <Panel title="Order a card" description="Choose one of your verified payments to pay for a card. Our team then funds the card with the card issuer.">
+              <div className="grid gap-3 sm:grid-cols-[1fr_auto] sm:items-end">
+                <SelectInput
+                  label="Verified payment"
+                  placeholder="Choose a payment"
+                  options={payments.map((p) => ({ value: p.id, label: `${p.reference} · ${birr(p.amountMinor)}` }))}
+                  value={paymentId}
+                  onChange={(e) => setPaymentId(e.target.value)}
+                />
+                <Button
+                  icon={Plus}
+                  disabled={!paymentId}
+                  loading={busy === "order"}
+                  onClick={() => run("order", () => cardIssuerService.orderCard(paymentId).then(() => setPaymentId("")), "Card ordered.")}
+                >
+                  Order card
+                </Button>
+              </div>
+            </Panel>
+          )}
 
           <Panel padded={false}>
-            {cards.length === 0 ? (
+            {orders.length === 0 ? (
               <EmptyState
                 icon={CreditCard}
                 title="No cards yet"
-                description="Create a virtual card and pay online anywhere the network is accepted."
-                action={
-                  <Button
-                    icon={Plus}
-                    loading={creating}
-                    onClick={createCard}
-                  >
-                    Create your first card
-                  </Button>
-                }
+                description={payments.length ? "Order a card with one of your verified payments above." : "Verify with the card issuer, then add money to your account to order a card."}
               />
             ) : (
-              cards.map((card) => (
-                <CardRow
-                  key={card.id}
-                  card={card}
-                  busyId={busyId}
-                  onToggleFreeze={toggleFreeze}
+              orders.map((order) => (
+                <OrderRow
+                  key={order.id}
+                  order={order}
+                  busy={busy}
+                  onIssue={(o) => run(`issue-${o.id}`, () => cardIssuerService.issueCard(o.id))}
+                  onRefresh={(o) => run(`refresh-${o.id}`, () => cardIssuerService.refreshCard(o.id))}
                 />
               ))
             )}

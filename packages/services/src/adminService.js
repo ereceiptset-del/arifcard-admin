@@ -49,8 +49,14 @@ export const adminService = {
    */
   issuerFunding: (uid, options) =>
     backendApi.get(`/admin/provider/customers/${encodeURIComponent(uid)}/funding`, { ...options, auth: true }),
-  createIssuerFunding: (uid, { expectedUsdc, coin, network }) =>
-    backendApi.post(`/admin/provider/customers/${encodeURIComponent(uid)}/funding`, { expectedUsdc, coin, network }, { auth: true }),
+  createIssuerFunding: (uid, { expectedUsdc, coin, network, orderId }) =>
+    backendApi.post(`/admin/provider/customers/${encodeURIComponent(uid)}/funding`, { expectedUsdc, coin, network, ...(orderId ? { orderId } : {}) }, { auth: true }),
+
+  /** Card orders: payment → funding → issuance. Staff read; administrators resolve. */
+  cardOrders: (uid, options) =>
+    backendApi.get(`/admin/provider/customers/${encodeURIComponent(uid)}/card-orders`, { ...options, auth: true }),
+  resolveCardOrder: (orderId, { resolution, reason }) =>
+    backendApi.post(`/admin/provider/card-orders/${encodeURIComponent(orderId)}/resolve`, { resolution, reason }, { auth: true }),
   syncIssuerFunding: (fundingId) =>
     backendApi.post(`/admin/provider/funding/${encodeURIComponent(fundingId)}/sync`, undefined, { auth: true }),
   resolveIssuerFunding: (fundingId, { resolution, reason }) =>

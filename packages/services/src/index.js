@@ -21,6 +21,8 @@ export {
   ISSUER_KYC_ORIGINS,
   ISSUER_ONBOARDING_LABEL,
   ISSUER_ONBOARDING_TONE,
+  CARD_ORDER_LABEL,
+  CARD_ORDER_TONE,
 } from "./cardIssuerService.js";
 export { isUnavailable, FEATURE_UNAVAILABLE } from "./unavailable.js";
 export * from "./contracts.js";

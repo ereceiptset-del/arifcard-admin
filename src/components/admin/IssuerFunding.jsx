@@ -35,9 +35,9 @@ const OPEN = ["AWAITING_DEPOSIT", "PROCESSING", "PARTIALLY_FUNDED", "DISCREPANCY
 
 export default function IssuerFunding({ uid }) {
   const toast = useToast();
-  const load = useCallback(() => adminService.issuerFunding(uid), [uid]);
+  const load = useCallback(() => Promise.all([adminService.issuerFunding(uid), adminService.cardOrders(uid)]).then(([funding, orders]) => ({ ...funding, orders: orders.orders })), [uid]);
   const { data, error, loading, reload } = useAsync(load, [uid]);
-  const [form, setForm] = useState({ expectedUsdc: "", choice: "" });
+  const [form, setForm] = useState({ expectedUsdc: "", choice: "", orderId: "" });
   const [busy, setBusy] = useState(null);
 
   const choices = useMemo(
@@ -63,9 +63,12 @@ export default function IssuerFunding({ uid }) {
     }
   };
 
+  // Card orders still waiting for a funding record: funding one is what makes it issuable.
+  const awaiting = (data?.orders || []).filter((o) => o.status === "AWAITING_FUNDING" && !o.fundingId);
+
   const create = () => {
     const [coin, network] = form.choice.split("|");
-    return act("create", () => adminService.createIssuerFunding(uid, { expectedUsdc: form.expectedUsdc, coin, network }), "Expected deposit recorded.");
+    return act("create", () => adminService.createIssuerFunding(uid, { expectedUsdc: form.expectedUsdc, coin, network, orderId: form.orderId || undefined }), "Expected deposit recorded.");
   };
 
   return (
@@ -89,7 +92,14 @@ export default function IssuerFunding({ uid }) {
           )}
 
           {data.route.ready && choices.length > 0 && !data.records.some((r) => OPEN.includes(r.status)) && (
-            <div className="grid gap-3 rounded-panel border border-line dark:border-line-dark p-4 sm:grid-cols-[1fr_2fr_auto] sm:items-end">
+            <div className="grid gap-3 rounded-panel border border-line dark:border-line-dark p-4 sm:grid-cols-[1fr_2fr_2fr_auto] sm:items-end">
+              <SelectInput
+                label="For card order"
+                placeholder="Not linked to an order"
+                options={awaiting.map((o) => ({ value: o.id, label: `${o.paymentReference || o.id} · paid ${(o.paymentAmountMinor / 100).toFixed(2)} ETB` }))}
+                value={form.orderId}
+                onChange={(e) => setForm({ ...form, orderId: e.target.value })}
+              />
               <TextInput label="Expected USDC" inputMode="decimal" placeholder="25.00" value={form.expectedUsdc} onChange={(e) => setForm({ ...form, expectedUsdc: e.target.value })} />
               <SelectInput label="Coin and network" options={choices} value={form.choice} onChange={(e) => setForm({ ...form, choice: e.target.value })} />
               <Button icon={Plus} loading={busy === "create"} disabled={!form.expectedUsdc || !form.choice} onClick={create}>
@@ -125,7 +135,7 @@ function FundingRow({ record: r, busy, act }) {
         <span className="font-mono">
           {r.confirmedUsdc} / {r.expectedUsdc} USDC
         </span>
-        <span className="text-ink-faint">fees {r.feesUsd} USD · {r.coin} on {r.network}</span>
+        <span className="text-ink-faint">fees {r.feesUsd} USD · {r.coin} on {r.network}{r.orderId ? ` · for order ${r.orderId}` : " · no card order"}</span>
         {open && (
           <Button variant="secondary" size="sm" icon={RefreshCw} loading={busy === `sync-${r.id}`} onClick={() => act(`sync-${r.id}`, () => adminService.syncIssuerFunding(r.id))} className="ml-auto">
             Check deposits

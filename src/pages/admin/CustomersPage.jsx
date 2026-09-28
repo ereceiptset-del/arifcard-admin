@@ -13,6 +13,7 @@ import {
 } from "@addiscard/services";
 import { useAsync } from "../../hooks/useAsync.js";
 import IssuerFunding from "../../components/admin/IssuerFunding.jsx";
+import IssuerCardOrders from "../../components/admin/IssuerCardOrders.jsx";
 
 /**
  * Customers.
@@ -249,6 +250,8 @@ function CustomerDialog({ uid, onClose }) {
           </div>
 
           <IssuerOnboarding uid={uid} />
+
+          <IssuerCardOrders uid={uid} />
 
           <IssuerFunding uid={uid} />
 
