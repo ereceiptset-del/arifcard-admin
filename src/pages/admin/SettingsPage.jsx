@@ -1,6 +1,6 @@
-import { useCallback } from "react";
-import { CheckCircle2, MinusCircle, ShieldCheck } from "lucide-react";
-import { Panel, Badge, ErrorState, Skeleton } from "@addiscard/ui";
+import { useCallback, useState } from "react";
+import { CheckCircle2, MinusCircle, ShieldCheck, PlugZap } from "lucide-react";
+import { Panel, Badge, ErrorState, Skeleton, Button } from "@addiscard/ui";
 import { adminService } from "@addiscard/services";
 import { useAuth } from "../../context/AuthContext";
 import { useAsync } from "../../hooks/useAsync.js";
@@ -99,9 +99,55 @@ export default function SettingsPage() {
               })}
             </ul>
           </Panel>
+          <ConnectionCheck />
         </div>
       )}
     </>
+  );
+}
+
+/**
+ * One read-only request to the card issuer, made by the server from its own
+ * network. Administrator only (the backend refuses anyone else). Shows the
+ * shape of the answer — status and count — never card data.
+ */
+function ConnectionCheck() {
+  const [state, setState] = useState({ busy: false, result: null, error: null });
+  const run = async () => {
+    setState({ busy: true, result: null, error: null });
+    try {
+      const { check, checkedAt } = await adminService.checkProviderConnection();
+      setState({ busy: false, result: { ...check, checkedAt }, error: null });
+    } catch (problem) {
+      setState({ busy: false, result: null, error: problem?.message || "The check could not run." });
+    }
+  };
+  const r = state.result;
+  return (
+    <div className="mt-5">
+      <Panel
+        title="Card issuer connection"
+        description="Sends one read-only request to the card issuer from this server, to confirm the key and network work."
+        action={
+          <Button size="sm" variant="secondary" icon={PlugZap} loading={state.busy} onClick={run}>
+            Test connection
+          </Button>
+        }
+      >
+        {!r && !state.error && <p className="text-[12.5px] text-ink-faint">Not tested in this session.</p>}
+        {state.error && <p className="text-[12.5px] text-danger">{state.error}</p>}
+        {r && (
+          <p className="text-[12.5px] text-ink dark:text-ink-dark">
+            {r.ok ? (
+              <>Connected ({r.environment}) · HTTP {r.httpStatus} · {r.cardCount ?? "?"} card(s) in the programme.</>
+            ) : (
+              <>Not connected{r.error?.code ? ` — ${r.error.code}` : ""}{r.error?.message ? `: ${r.error.message}` : ""}</>
+            )}
+            <span className="ml-2 text-ink-faint">{new Date(r.checkedAt).toLocaleString()}</span>
+          </p>
+        )}
+      </Panel>
+    </div>
   );
 }
 

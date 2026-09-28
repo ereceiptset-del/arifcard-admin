@@ -63,6 +63,9 @@ export const adminService = {
     backendApi.post(`/admin/provider/funding/${encodeURIComponent(fundingId)}/resolve`, { resolution, reason }, { auth: true }),
   staff: (options) => backendApi.get("/admin/staff", { ...options, auth: true }),
 
+  /** One read-only request to the card issuer from the server. Administrators only. */
+  checkProviderConnection: () => backendApi.post("/admin/provider/connection-check", undefined, { auth: true }),
+
   /** Whether each thing is configured. Never what it is configured to. */
   settings: (options) => backendApi.get("/admin/settings", { ...options, auth: true }),
 
