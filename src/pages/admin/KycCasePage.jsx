@@ -291,7 +291,7 @@ export default function KycCasePage() {
   return (
     <>
       <Link
-        to="/admin/kyc"
+        to="/kyc"
         className="inline-flex items-center gap-1.5 text-[13px] font-medium text-ink-muted dark:text-ink-muted-dark transition-colors hover:text-brand"
       >
         <ArrowLeft size={15} />

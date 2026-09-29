@@ -1,29 +1,32 @@
-import { Link, Navigate } from "react-router-dom";
+import { Navigate, useLocation, useNavigate } from "react-router-dom";
 import { ShieldAlert, Loader2 } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 
 /**
- * Keeps non-staff out of the staff area.
+ * The customer site. A fixed destination from build configuration — never
+ * taken from a query string, and no session or token is ever handed to it.
+ */
+const CUSTOMER_SITE_URL = import.meta.env.VITE_CUSTOMER_SITE_URL || "https://addiscard-1a9bc.web.app";
+
+/**
+ * Keeps non-staff out of the console.
  *
  * This is a courtesy, not a control. `isStaff` comes from `/auth/me`,
  * which resolves it from the Firebase claim and the active staff record —
  * but a browser can be told anything. Every staff endpoint re-checks on
  * the server, and that is what actually protects the data.
  *
- * Two things it is careful about:
- *
  * **Nothing private renders while the answer is unknown.** The loading
- * state returns early rather than rendering children optimistically, so
- * there is no moment where admin content is on screen before the check
- * finishes.
+ * state returns early rather than rendering children optimistically.
  *
- * **A signed-in customer is told they were refused**, rather than being
- * bounced to `/customer` as if they had mistyped. A silent redirect from
- * a link someone was given looks like a broken link; being told the
- * answer is "no" is the truth and is easier to act on.
+ * **A signed-in customer is told they were refused**, and can sign out
+ * here: their session on this site is useless to them and should not
+ * linger. The customer site is linked, not handed a session.
  */
 export default function RequireStaff({ children }) {
-  const { user, isLoading } = useAuth();
+  const { user, isLoading, logout } = useAuth();
+  const location = useLocation();
+  const navigate = useNavigate();
 
   if (isLoading) {
     return (
@@ -36,11 +39,14 @@ export default function RequireStaff({ children }) {
     );
   }
 
-  // Not signed in at all: that is a sign-in problem, not a permissions
-  // one, so send them somewhere they can fix it.
-  if (!user) return <Navigate to="/login" replace />;
+  // Not signed in: send them to sign in, and back here afterwards.
+  if (!user) return <Navigate to="/login" replace state={{ from: location }} />;
 
   if (!user.isStaff) {
+    const signOut = () => {
+      logout();
+      navigate("/login", { replace: true });
+    };
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#F8F9FB] dark:bg-[#080C16] px-4">
         <div className="w-full max-w-md rounded-panel border border-line dark:border-line-dark bg-panel dark:bg-panel-dark p-8 text-center">
@@ -56,13 +62,17 @@ export default function RequireStaff({ children }) {
             If you believe this is wrong, ask whoever administers Arifcard. Access is granted from the server
             and cannot be requested from this page.
           </p>
-          <div className="mt-6">
-            <Link
-              to="/customer"
+          <div className="mt-6 flex flex-col items-center gap-3">
+            <button
+              type="button"
+              onClick={signOut}
               className="inline-flex items-center justify-center rounded-field bg-brand px-4 py-2.5 text-[13px] font-semibold text-white hover:bg-brand-hover transition-colors"
             >
-              Go to your account
-            </Link>
+              Sign out
+            </button>
+            <a href={CUSTOMER_SITE_URL} rel="noopener" className="text-[12.5px] text-brand hover:underline">
+              Go to the Arifcard customer site
+            </a>
           </div>
         </div>
       </div>

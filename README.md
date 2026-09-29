@@ -1,73 +1,72 @@
-# Arifcard — Frontend
+# Arifcard Admin
 
-React + JavaScript + Vite + Tailwind CSS. One application.
+The staff console for Arifcard, served at **https://arifcard-admin-1a9bc.web.app**
+(Firebase Hosting site `arifcard-admin-1a9bc`, target `admin`, project
+`addiscard-1a9bc`). It is separate from the customer site
+(`addiscard-front`, https://addiscard-1a9bc.web.app) and shares one backend
+(`addiscard-back`, Cloud Function `api`).
 
-| Path                 | What it is                                    |
-| -------------------- | --------------------------------------------- |
-| `src/`               | The app: marketing, auth, `/customer`, `/admin` |
-| `packages/ui/`       | Design tokens, primitives, dashboard shell    |
-| `packages/services/` | Auth client and the browser-side demo store   |
+A separate site is **not** the security boundary. Every `/api/admin/*`
+request is authorised by the backend: a valid session → the Firebase
+account enabled + staff claim + an active `staff/{uid}` record → the role
+the action needs. This app only decides what to show.
 
-`packages/*` are npm workspaces. `vite.config.js` aliases them to their
-source so their JSX goes through the React transform.
+## Screens
 
-## Install and run
+Overview, Customers (with card-issuer onboarding, card orders and funding),
+Identity verification (queue and case review with private evidence
+previews), Payments, Card orders, Cards, Transactions, Notifications, Audit
+logs, Settings. Sign-in, forgot and reset password. There is no sign-up:
+staff are provisioned on the server (`backend/scripts/provision-owner.mjs`,
+`grant-staff.mjs`).
+
+Old links from the combined site (`/admin/...`) redirect to the same page
+here (`/...`).
+
+## Develop
 
 ```bash
-cd frontend
-npm install
-npm run dev            # http://localhost:5173
+npm ci
+cp .env.example .env       # local API at http://localhost:4000/api
+npm run dev                # http://localhost:5174 (needs the backend running)
 ```
 
-The backend must be running too, for sign-in:
+## Test and build
 
 ```bash
-cd backend
-npm run dev            # http://localhost:4000
-```
-
-## Build and lint
-
-```bash
-npm run build
 npm run lint
+npm test                   # builds, then checks the bundle and hosting config
 ```
 
-## Deploy
+`npm test` fails if the build contains customer/marketing/sign-up screens,
+an inline script (forbidden by the CSP), a localhost API address, or if
+`firebase.json` could deploy anything but the admin hosting target.
 
-The site is served by Firebase Hosting at **https://addiscard-1a9bc.web.app**.
-The backend is on the same URL under `/api`: Hosting forwards `/api/**`
-to the backend's Cloud Function. Deploy that from `backend/` with its own
-`npm run deploy`, before the site when a change touches both.
-
-Once per machine: `npm install -g firebase-tools`, then `firebase login`.
+## Deploy (only with the owner's approval)
 
 ```bash
-npm run deploy     # vite build, then firebase deploy --only hosting
+npm run deploy             # build → bundle check → firebase deploy --only hosting:admin
 ```
 
-The Firebase config (`firebase.json`, `.firebaserc`) is in the parent
-workspace folder; the Firebase CLI finds it from here.
+`.firebaserc` maps target `admin` to site `arifcard-admin-1a9bc` only.
+`firebase.json` contains hosting only — no Functions, no rules: those are
+deployed from the backend repository. `/api/**` is rewritten to the shared
+function before the SPA fallback, so API calls are same-origin.
 
-Production builds use `.env.production`: `VITE_API_BASE_URL=/api`, the one
-setting every API call reads, so the deployed site talks to the deployed
-backend on its own origin. Locally, `.env` points at `http://localhost:4000/api`.
+Security headers (in `firebase.json`): a strict Content-Security-Policy
+(scripts from this site only; styles/fonts from Google Fonts; images from
+this site and signed Cloud Storage URLs; no frames), `X-Frame-Options:
+DENY`, `Referrer-Policy: no-referrer` (evidence URLs never leak the page),
+`noindex`. Pages revalidate on every visit; hashed assets cache for a year.
 
-## Signed-in areas
+## Sessions
 
-`/customer` and `/admin` are both behind `ProtectedRoute`. They are built
-from `packages/ui`, which needs its own theme and toast providers — those
-are mounted on those two subtrees in `src/routes/AppRoutes.jsx`, not around
-the whole app, because the marketing and auth pages do not use them. The
-shared theme provider uses the same storage key as the site's own
-`ThemeContext`, so light/dark stays consistent across the two.
+Sign-in returns a backend session token kept in this site's own
+`localStorage` — never shared with the customer site (different origin),
+never put in a URL. Signing out removes it and unmounts every screen, so
+no admin data stays in memory.
 
-## Data
+## Shared code
 
-Sign-in is real. Everything the dashboards display is demo data generated
-in the browser by `packages/services/src/localStore.js` — per-browser, reset
-when site data is cleared, and labelled DEMO in the UI.
-
-`.env` points at `http://localhost:4000/api` for local development;
-`.env.production` uses the relative `/api`, which Firebase Hosting rewrites
-to the Cloud Function.
+`packages/ui` and `packages/services` are this repository's own copies —
+see [docs/shared-code.md](docs/shared-code.md).

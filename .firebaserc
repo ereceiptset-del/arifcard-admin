@@ -1,0 +1,12 @@
+{
+  "projects": {
+    "default": "addiscard-1a9bc"
+  },
+  "targets": {
+    "addiscard-1a9bc": {
+      "hosting": {
+        "admin": ["arifcard-admin-1a9bc"]
+      }
+    }
+  }
+}

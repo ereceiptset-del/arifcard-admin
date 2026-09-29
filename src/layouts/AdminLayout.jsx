@@ -23,16 +23,16 @@ import { useAuth } from "../context/AuthContext";
  * arrival rather than being hidden or faked.
  */
 const NAV_ITEMS = [
-  { label: "Overview", to: "/admin", icon: LayoutDashboard, end: true },
-  { label: "Customers", to: "/admin/customers", icon: Users },
-  { label: "Identity verification", to: "/admin/kyc", icon: ShieldCheck },
-  { label: "Payments", to: "/admin/payments", icon: Banknote },
-  { label: "Transactions", to: "/admin/transactions", icon: ArrowLeftRight },
-  { label: "Card orders", to: "/admin/card-orders", icon: PackageOpen },
-  { label: "Cards", to: "/admin/cards", icon: CreditCard },
-  { label: "Notifications", to: "/admin/notifications", icon: Bell },
-  { label: "Audit logs", to: "/admin/audit", icon: ScrollText },
-  { label: "Settings", to: "/admin/settings", icon: Settings },
+  { label: "Overview", to: "/", icon: LayoutDashboard, end: true },
+  { label: "Customers", to: "/customers", icon: Users },
+  { label: "Identity verification", to: "/kyc", icon: ShieldCheck },
+  { label: "Payments", to: "/payments", icon: Banknote },
+  { label: "Transactions", to: "/transactions", icon: ArrowLeftRight },
+  { label: "Card orders", to: "/card-orders", icon: PackageOpen },
+  { label: "Cards", to: "/cards", icon: CreditCard },
+  { label: "Notifications", to: "/notifications", icon: Bell },
+  { label: "Audit logs", to: "/audit", icon: ScrollText },
+  { label: "Settings", to: "/settings", icon: Settings },
 ];
 
 /** The signed-in staff member's role, as the backend reports it. */

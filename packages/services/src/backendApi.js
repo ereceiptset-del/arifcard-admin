@@ -9,7 +9,10 @@ import { ApiError } from "./apiClient.js";
  * The session token is kept in localStorage under the same key the main web
  * app uses, so the two stay consistent and a sign-in survives a reload.
  */
-const DEFAULT_BASE_URL = "http://localhost:4000/api";
+// Same-origin by default: Hosting rewrites /api to the backend function,
+// and the Vite dev server proxies it to the local backend. A build that
+// forgot its settings then still talks to its own site — never localhost.
+const DEFAULT_BASE_URL = "/api";
 const TOKEN_STORAGE_KEY = "addiscard_token";
 
 /**

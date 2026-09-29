@@ -155,7 +155,7 @@ export default function OverviewPage() {
               <ul className="mt-2 flex flex-col gap-1 text-[13px] text-ink dark:text-ink-dark">
                 {waiting > 0 && (
                   <li>
-                    <Link to="/admin/kyc?status=PENDING" className="text-brand hover:underline">
+                    <Link to="/kyc?status=PENDING" className="text-brand hover:underline">
                       {waiting} identity {waiting === 1 ? "case is" : "cases are"} waiting
                     </Link>
                     {kyc?.oldestWaiting && (
@@ -168,14 +168,14 @@ export default function OverviewPage() {
                 )}
                 {(payments?.needsReview.value || 0) > 0 && (
                   <li>
-                    <Link to="/admin/payments?status=REQUIRES_REVIEW" className="text-brand hover:underline">
+                    <Link to="/payments?status=REQUIRES_REVIEW" className="text-brand hover:underline">
                       {payments.needsReview.value} payment(s) need a person
                     </Link>
                   </li>
                 )}
                 {(ops?.failedNotifications.value || 0) > 0 && (
                   <li>
-                    <Link to="/admin/notifications" className="text-brand hover:underline">
+                    <Link to="/notifications" className="text-brand hover:underline">
                       {ops.failedNotifications.value} email(s) failed to send
                     </Link>
                   </li>
@@ -189,11 +189,11 @@ export default function OverviewPage() {
             Identity queue <span className="font-normal text-ink-faint">— right now</span>
           </h2>
           <div className="mt-3 grid grid-cols-2 gap-4 lg:grid-cols-5">
-            <Metric label="Waiting" metric={{ available: true, value: kyc.queue.pending }} to="/admin/kyc?status=PENDING" tone={kyc.queue.pending > 0 ? "warn" : "neutral"} />
-            <Metric label="Being reviewed" metric={{ available: true, value: kyc.queue.underReview }} to="/admin/kyc?status=UNDER_REVIEW" />
-            <Metric label="Changes requested" metric={{ available: true, value: kyc.queue.changesRequested }} to="/admin/kyc?status=CHANGES_REQUESTED" />
-            <Metric label="Approved" metric={{ available: true, value: kyc.queue.approved }} to="/admin/kyc?status=APPROVED" />
-            <Metric label="Rejected" metric={{ available: true, value: kyc.queue.rejected }} to="/admin/kyc?status=REJECTED" />
+            <Metric label="Waiting" metric={{ available: true, value: kyc.queue.pending }} to="/kyc?status=PENDING" tone={kyc.queue.pending > 0 ? "warn" : "neutral"} />
+            <Metric label="Being reviewed" metric={{ available: true, value: kyc.queue.underReview }} to="/kyc?status=UNDER_REVIEW" />
+            <Metric label="Changes requested" metric={{ available: true, value: kyc.queue.changesRequested }} to="/kyc?status=CHANGES_REQUESTED" />
+            <Metric label="Approved" metric={{ available: true, value: kyc.queue.approved }} to="/kyc?status=APPROVED" />
+            <Metric label="Rejected" metric={{ available: true, value: kyc.queue.rejected }} to="/kyc?status=REJECTED" />
           </div>
 
           {/* Period activity */}
@@ -205,7 +205,7 @@ export default function OverviewPage() {
             </span>
           </h2>
           <div className="mt-3 grid grid-cols-2 gap-4 lg:grid-cols-4">
-            <Metric label="New customers" metric={customers.newInPeriod} to="/admin/customers" />
+            <Metric label="New customers" metric={customers.newInPeriod} to="/customers" />
             <Metric label="Decisions made" metric={kyc.decidedInPeriod} />
             <Metric
               label="Approval rate"
@@ -217,7 +217,7 @@ export default function OverviewPage() {
           </div>
 
           <div className="mt-4 grid grid-cols-2 gap-4 lg:grid-cols-4">
-            <Metric label="Verified payments" metric={payments.verifiedCount} to="/admin/payments?status=VERIFIED" hint="counted per payment, not per receipt" />
+            <Metric label="Verified payments" metric={payments.verifiedCount} to="/payments?status=VERIFIED" hint="counted per payment, not per receipt" />
             <Metric label="Verified amount" metric={payments.verifiedMinor} format={(n) => birr(n)} />
             <Metric label="CBE" metric={{ available: true, value: payments.byProvider.CBE.count }} />
             <Metric label="Telebirr" metric={{ available: true, value: payments.byProvider.TELEBIRR.count }} />
@@ -227,7 +227,7 @@ export default function OverviewPage() {
             Receipts needing a person <span className="font-normal text-ink-faint">— right now</span>
           </h2>
           <div className="mt-3 grid grid-cols-2 gap-4 lg:grid-cols-4">
-            <Metric label="Needs a person" metric={payments.needsReview} to="/admin/payments?status=REQUIRES_REVIEW" tone={payments.needsReview.value > 0 ? "warn" : "neutral"} />
+            <Metric label="Needs a person" metric={payments.needsReview} to="/payments?status=REQUIRES_REVIEW" tone={payments.needsReview.value > 0 ? "warn" : "neutral"} />
             <Metric label="Still checking" metric={payments.verifying} />
             <Metric label="Already-allocated transactions" metric={payments.duplicateRejected} hint="a transaction presented again — never credited twice" />
             <Metric label="Provider unreachable" metric={payments.providerFailures} hint="ours to retry, not the customer's fault" />

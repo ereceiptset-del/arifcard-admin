@@ -45,7 +45,7 @@ export default function KycQueuePage() {
       key: "customer",
       header: "Customer",
       render: (row) => (
-        <Link to={`/admin/kyc/${row.id}`} className="block min-w-0">
+        <Link to={`/kyc/${row.id}`} className="block min-w-0">
           <p className="truncate font-medium text-ink dark:text-ink-dark">
             {row.customer?.name || "Unknown"}
           </p>

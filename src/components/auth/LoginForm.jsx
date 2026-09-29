@@ -9,7 +9,8 @@ import { loginSchema, validate } from "../../validation/authSchemas";
  * LoginForm
  *
  * Light-mode authentication form for the /login route.
- * Redirects to the customer dashboard (/customer) upon successful login.
+ * Opens the admin dashboard on success. Whether the account is staff is
+ * decided by the server; a non-staff account is refused by RequireStaff.
  */
 function LoginForm() {
   const navigate = useNavigate();
@@ -41,23 +42,12 @@ function LoginForm() {
 
     setIsLoading(true);
     try {
-      const { user } = await login(data);
+      await login(data);
 
-      /*
-       * Staff land in the admin workspace, customers in their own.
-       *
-       * `isStaff` is resolved on the server from the Firebase claim and
-       * the active staff record — this only chooses which door to open,
-       * and every admin request is authorised again regardless. Sending
-       * everyone to /customer meant a reviewer signed in and had to know
-       * to type /admin themselves.
-       *
-       * A page they were bounced off still wins: if they followed a link
-       * to somewhere protected, that is where they were going.
-       */
+      // A page they were bounced off wins; otherwise the dashboard.
+      // RequireStaff shows "Access denied" to a signed-in non-staff account.
       const requested = location.state?.from?.pathname;
-      const destination = requested || (user?.isStaff ? "/admin" : "/customer");
-      navigate(destination, { replace: true });
+      navigate(requested || "/", { replace: true });
     } catch (err) {
       if (err instanceof ApiError && err.code === "EMAIL_NOT_VERIFIED") {
         setUnverifiedEmail(data.email);
@@ -109,13 +99,7 @@ function LoginForm() {
 
         {unverifiedEmail && (
           <p role="alert" className="text-xs text-red-500 dark:text-red-400">
-            Please verify your email before signing in.{" "}
-            <Link
-              to={`/verify?email=${encodeURIComponent(unverifiedEmail)}`}
-              className="font-semibold underline"
-            >
-              Verify now
-            </Link>
+            This account&apos;s email is not verified. Staff accounts are verified before access is granted.
           </p>
         )}
 
@@ -205,16 +189,10 @@ function LoginForm() {
         </button>
       </form>
 
-      {/* Bottom Navigation */}
-      <div className="mt-5 text-[13.5px] text-[#687180] dark:text-[#A6AFBE]">
-        <span>New here?</span>{" "}
-        <Link
-          to="/register"
-          className="font-semibold text-[#101217] dark:text-[#F6F7F9] hover:text-[#8055FF] transition-colors"
-        >
-          Create an account
-        </Link>
-      </div>
+      {/* No sign-up here: staff access is granted on the server only. */}
+      <p className="mt-5 text-[12.5px] text-[#687180] dark:text-[#A6AFBE]">
+        Staff only. Access is granted by an administrator, not requested here.
+      </p>
     </div>
   );
 }

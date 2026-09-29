@@ -1,5 +1,5 @@
 {
-  "name": "addiscard-frontend",
+  "name": "arifcard-admin",
   "private": true,
   "version": "0.0.0",
   "type": "module",
@@ -7,11 +7,14 @@
     "packages/*"
   ],
   "scripts": {
-    "dev": "vite",
+    "dev": "vite --port 5174",
     "build": "vite build",
-    "preview": "vite preview",
+    "preview": "vite preview --port 4174",
     "lint": "oxlint src packages",
-    "deploy": "npm run build && firebase deploy --only hosting"
+    "test": "npm run build && node --test \"tests/**/*.test.mjs\"",
+    "check:bundle": "node scripts/check-bundle.mjs",
+    "deploy": "npm run build && node scripts/check-bundle.mjs && firebase deploy --only hosting:admin --project addiscard-1a9bc",
+    "emulate": "firebase emulators:start --only hosting --project addiscard-1a9bc"
   },
   "dependencies": {
     "framer-motion": "^13.4.0",
