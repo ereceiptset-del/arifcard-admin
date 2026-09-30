@@ -5,8 +5,11 @@
   "targets": {
     "addiscard-1a9bc": {
       "hosting": {
-        "admin": ["arifcard-admin-1a9bc"]
+        "admin": [
+          "arifcard-admin-1a9bc"
+        ]
       }
     }
-  }
+  },
+  "etags": {}
 }
