@@ -120,10 +120,10 @@ function OtpInput({ value = "", onChange, disabled = false, invalid = false, aut
           onPaste={handlePaste}
           aria-label={`Digit ${index + 1} of 6`}
           aria-invalid={invalid || undefined}
-          className={`h-12 w-11 sm:w-12 rounded-lg border bg-white dark:bg-[#141823] text-center text-lg font-semibold tabular-nums text-[#101217] dark:text-[#F6F7F9] transition-colors duration-150 focus:outline-none focus:ring-2 focus:ring-[#8055FF]/20 disabled:opacity-60 ${
+          className={`h-12 w-11 sm:w-12 rounded-lg border bg-surface-1  text-center text-lg font-semibold tabular-nums text-ink transition-colors duration-150 focus:outline-none focus:ring-2 focus:ring-accent/20 disabled:opacity-60 ${
             invalid
-              ? "border-red-400 dark:border-red-500"
-              : "border-[#D5DAE1] dark:border-[#303643] focus:border-[#8055FF]"
+              ? "border-danger"
+              : "border-line-strong  focus:border-accent"
           }`}
         />
       ))}

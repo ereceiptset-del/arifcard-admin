@@ -35,7 +35,7 @@ function AuthLayout() {
   const location = useLocation();
 
   return (
-    <div className="relative flex min-h-screen w-full bg-[#FAFAFA] dark:bg-[#070B15] text-[#101217] dark:text-[#F6F7F9] transition-colors duration-200">
+    <div className="relative flex min-h-screen w-full bg-surface-0 text-ink transition-colors duration-200">
       {/* Theme control — available from every auth screen */}
       <div className="absolute top-5 right-5 sm:top-6 sm:right-6 lg:top-8 lg:right-10 z-10">
         <ThemeToggle />
@@ -57,7 +57,7 @@ function AuthLayout() {
           <Suspense
             fallback={
               <div className="flex justify-center py-10">
-                <div className="h-6 w-6 rounded-full border-2 border-[#8055FF] border-t-transparent animate-spin" />
+                <div className="h-6 w-6 rounded-full border-2 border-accent border-t-transparent animate-spin" />
               </div>
             }
           >

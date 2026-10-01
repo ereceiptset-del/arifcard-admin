@@ -125,14 +125,14 @@ function ForgotPasswordForm({ defaultStep = "request" }) {
   }, [status, navigate]);
 
   const inputClass = (hasError) =>
-    `h-10 w-full rounded-lg border bg-white dark:bg-[#141823] px-3 text-sm text-[#101217] dark:text-[#F6F7F9] placeholder:text-[#9CA3AF] dark:placeholder:text-[#5B6472] transition-colors duration-150 focus:outline-none focus:ring-2 focus:ring-[#8055FF]/20 ${
+    `h-11 w-full rounded-lg border bg-surface-1  px-3 text-sm text-ink placeholder:text-ink-muted  transition-colors duration-150 focus:outline-none focus:ring-2 focus:ring-accent/20 ${
       hasError
-        ? "border-red-400 dark:border-red-500"
-        : "border-[#D5DAE1] dark:border-[#303643] focus:border-[#8055FF]"
+        ? "border-danger"
+        : "border-line-strong  focus:border-accent"
     }`;
 
   const spinner = (
-    <svg className="h-4 w-4 animate-spin text-white" viewBox="0 0 24 24" fill="none">
+    <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none">
       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
       <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
     </svg>
@@ -142,22 +142,22 @@ function ForgotPasswordForm({ defaultStep = "request" }) {
     <div className="w-full max-w-[384px]">
       {/* Mobile-only wordmark so branding remains visible when left panel collapses */}
       <div className="lg:hidden mb-8">
-        <Link to="/" className="text-[18px] font-semibold tracking-tight text-[#101217] dark:text-[#F6F7F9]">
+        <Link to="/" className="text-[18px] font-semibold tracking-tight text-ink">
           Arifcard
         </Link>
       </div>
 
       <div>
-        <h1 className="text-[22px] font-semibold text-[#101217] dark:text-[#F6F7F9] tracking-tight">
+        <h1 className="text-[22px] font-semibold text-ink tracking-tight">
           Reset your password
         </h1>
-        <p className="mt-1 text-sm text-[#687180] dark:text-[#A6AFBE]">
+        <p className="mt-1 text-sm text-ink-muted">
           {step === "request" ? (
             "Enter your email to receive a reset code."
           ) : (
             <>
               Enter the 6 digit code we sent to{" "}
-              <span className="font-semibold text-[#101217] dark:text-[#F6F7F9]">{email}</span>, then
+              <span className="font-semibold text-ink">{email}</span>, then
               choose a new password.
             </>
           )}
@@ -167,7 +167,7 @@ function ForgotPasswordForm({ defaultStep = "request" }) {
       {step === "request" ? (
         <form onSubmit={handleRequest} className="mt-6 flex flex-col gap-4" noValidate>
           {formError && (
-            <p role="alert" className="text-xs text-red-500 dark:text-red-400">
+            <p role="alert" className="text-xs text-danger">
               {formError}
             </p>
           )}
@@ -175,7 +175,7 @@ function ForgotPasswordForm({ defaultStep = "request" }) {
           <div>
             <label
               htmlFor="forgot-email"
-              className="block text-[13.5px] font-medium text-[#101217] dark:text-[#F6F7F9] mb-1.5"
+              className="block text-small font-medium text-ink mb-1.5"
             >
               Email
             </label>
@@ -190,14 +190,14 @@ function ForgotPasswordForm({ defaultStep = "request" }) {
               className={inputClass(fieldErrors.email)}
             />
             {fieldErrors.email && (
-              <p className="mt-1 text-xs text-red-500 dark:text-red-400">{fieldErrors.email}</p>
+              <p className="mt-1 text-xs text-danger">{fieldErrors.email}</p>
             )}
           </div>
 
           <button
             type="submit"
             disabled={status === "loading"}
-            className="relative mt-2 h-10 w-full rounded-lg bg-[#8055FF] hover:bg-[#7447F8] active:bg-[#6C3FE0] disabled:bg-[#A98FF5] text-white text-sm font-semibold transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#8055FF]/30 flex items-center justify-center"
+            className="relative mt-2 h-11 w-full rounded-lg bg-accent hover:bg-accent-hover active:bg-accent-hover disabled:opacity-50 text-on-accent text-sm font-semibold transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/30 flex items-center justify-center"
           >
             {status === "loading" ? spinner : "Send reset code"}
           </button>
@@ -205,13 +205,13 @@ function ForgotPasswordForm({ defaultStep = "request" }) {
       ) : (
         <form onSubmit={handleReset} className="mt-6 flex flex-col gap-4" noValidate>
           {formError && (
-            <p role="alert" className="text-xs text-red-500 dark:text-red-400">
+            <p role="alert" className="text-xs text-danger">
               {formError}
             </p>
           )}
 
           <div>
-            <span className="block text-[13.5px] font-medium text-[#101217] dark:text-[#F6F7F9] mb-2">
+            <span className="block text-small font-medium text-ink mb-2">
               Reset code
             </span>
             <OtpInput
@@ -224,14 +224,14 @@ function ForgotPasswordForm({ defaultStep = "request" }) {
               disabled={status === "loading" || status === "success"}
             />
             {fieldErrors.code && (
-              <p className="mt-1.5 text-xs text-red-500 dark:text-red-400">{fieldErrors.code}</p>
+              <p className="mt-1.5 text-xs text-danger">{fieldErrors.code}</p>
             )}
           </div>
 
           <div>
             <label
               htmlFor="new-password"
-              className="block text-[13.5px] font-medium text-[#101217] dark:text-[#F6F7F9] mb-1.5"
+              className="block text-small font-medium text-ink mb-1.5"
             >
               New password
             </label>
@@ -249,22 +249,22 @@ function ForgotPasswordForm({ defaultStep = "request" }) {
                 type="button"
                 onClick={() => setShowPassword((prev) => !prev)}
                 aria-label={showPassword ? "Hide password" : "Show password"}
-                className="absolute right-3 p-1 text-[#9CA3AF] dark:text-[#687180] hover:text-[#687180] dark:hover:text-[#A6AFBE] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#8055FF]/30 rounded"
+                className="absolute right-3 p-1 text-ink-muted hover:text-ink-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/30 rounded"
               >
                 {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
               </button>
             </div>
             {fieldErrors.newPassword ? (
-              <p className="mt-1 text-xs text-red-500 dark:text-red-400">{fieldErrors.newPassword}</p>
+              <p className="mt-1 text-xs text-danger">{fieldErrors.newPassword}</p>
             ) : (
-              <p className="mt-1.5 text-xs text-[#8E96A4]">At least 8 characters.</p>
+              <p className="mt-1.5 text-xs text-ink-muted">At least 8 characters.</p>
             )}
           </div>
 
           <div>
             <label
               htmlFor="confirm-password"
-              className="block text-[13.5px] font-medium text-[#101217] dark:text-[#F6F7F9] mb-1.5"
+              className="block text-small font-medium text-ink mb-1.5"
             >
               Confirm new password
             </label>
@@ -278,7 +278,7 @@ function ForgotPasswordForm({ defaultStep = "request" }) {
               className={inputClass(fieldErrors.confirmPassword)}
             />
             {fieldErrors.confirmPassword && (
-              <p className="mt-1 text-xs text-red-500 dark:text-red-400">
+              <p className="mt-1 text-xs text-danger">
                 {fieldErrors.confirmPassword}
               </p>
             )}
@@ -287,19 +287,19 @@ function ForgotPasswordForm({ defaultStep = "request" }) {
           <button
             type="submit"
             disabled={!isCodeComplete || status === "loading" || status === "success"}
-            className="relative mt-2 h-10 w-full rounded-lg bg-[#8055FF] hover:bg-[#7447F8] active:bg-[#6C3FE0] disabled:bg-[#A98FF5] text-white text-sm font-semibold transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#8055FF]/30 flex items-center justify-center gap-2"
+            className="relative mt-2 h-11 w-full rounded-lg bg-accent hover:bg-accent-hover active:bg-accent-hover disabled:opacity-50 text-on-accent text-sm font-semibold transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/30 flex items-center justify-center gap-2"
           >
             {status === "loading" && spinner}
             <span>{status === "success" ? "Password updated ✓" : "Reset password"}</span>
           </button>
 
-          <div className="flex items-center justify-between gap-3 text-[12.5px] text-[#687180] dark:text-[#A6AFBE]">
+          <div className="flex items-center justify-between gap-3 text-small text-ink-muted">
             <span>{expired ? "This code has expired." : `Code expires in ${formatted}`}</span>
             <button
               type="button"
               onClick={handleResend}
               disabled={status === "loading" || status === "success"}
-              className="font-semibold text-[#8055FF] hover:text-[#7447F8] disabled:opacity-60 transition-colors"
+              className="font-semibold text-accent-ink hover:text-accent-ink disabled:opacity-60 transition-colors"
             >
               Send again
             </button>
@@ -307,7 +307,7 @@ function ForgotPasswordForm({ defaultStep = "request" }) {
         </form>
       )}
 
-      <div className="mt-5 flex items-center gap-3 text-[13.5px] text-[#687180] dark:text-[#A6AFBE]">
+      <div className="mt-5 flex items-center gap-3 text-small text-ink-muted">
         {step === "reset" && (
           <>
             <button
@@ -318,18 +318,18 @@ function ForgotPasswordForm({ defaultStep = "request" }) {
                 setFormError("");
                 setFieldErrors({});
               }}
-              className="font-semibold text-[#101217] dark:text-[#F6F7F9] hover:text-[#8055FF] transition-colors"
+              className="font-semibold text-ink hover:text-accent-ink transition-colors"
             >
               Use a different email
             </button>
-            <span aria-hidden className="text-[#D5DAE1] dark:text-[#303643]">
+            <span aria-hidden className="text-ink-muted">
               |
             </span>
           </>
         )}
         <Link
           to="/login"
-          className="font-semibold text-[#101217] dark:text-[#F6F7F9] hover:text-[#8055FF] transition-colors"
+          className="font-semibold text-ink hover:text-accent-ink transition-colors"
         >
           Back to sign in
         </Link>

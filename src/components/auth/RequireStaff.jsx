@@ -30,9 +30,9 @@ export default function RequireStaff({ children }) {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center gap-3 bg-[#F8F9FB] dark:bg-[#080C16]">
-        <Loader2 className="h-7 w-7 animate-spin text-brand" aria-hidden="true" />
-        <p className="text-[13px] text-ink-muted dark:text-ink-muted-dark" role="status">
+      <div className="min-h-screen flex flex-col items-center justify-center gap-3 bg-surface-0">
+        <Loader2 className="h-7 w-7 animate-spin text-link" aria-hidden="true" />
+        <p className="text-small text-ink-muted" role="status">
           Checking your access…
         </p>
       </div>
@@ -48,17 +48,17 @@ export default function RequireStaff({ children }) {
       navigate("/login", { replace: true });
     };
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#F8F9FB] dark:bg-[#080C16] px-4">
-        <div className="w-full max-w-md rounded-panel border border-line dark:border-line-dark bg-panel dark:bg-panel-dark p-8 text-center">
+      <div className="min-h-screen flex items-center justify-center bg-surface-0 px-4">
+        <div className="w-full max-w-md rounded-panel border border-line bg-surface-1 p-8 text-center">
           <span className="mx-auto flex h-11 w-11 items-center justify-center rounded-full bg-danger/10 text-danger">
             <ShieldAlert size={20} aria-hidden="true" />
           </span>
-          <h1 className="mt-4 text-[17px] font-semibold text-ink dark:text-ink-dark">Access denied</h1>
-          <p className="mt-2 text-[13.5px] text-ink-muted dark:text-ink-muted-dark">
+          <h1 className="mt-4 text-h2 text-ink">Access denied</h1>
+          <p className="mt-2 text-small text-ink-muted">
             You are signed in, but this account does not have administrator access. Being signed in is not
             enough on its own.
           </p>
-          <p className="mt-3 text-[12.5px] text-ink-faint">
+          <p className="mt-3 text-small text-ink-muted">
             If you believe this is wrong, ask whoever administers Arifcard. Access is granted from the server
             and cannot be requested from this page.
           </p>
@@ -66,11 +66,11 @@ export default function RequireStaff({ children }) {
             <button
               type="button"
               onClick={signOut}
-              className="inline-flex items-center justify-center rounded-field bg-brand px-4 py-2.5 text-[13px] font-semibold text-white hover:bg-brand-hover transition-colors"
+              className="inline-flex items-center justify-center rounded-field bg-accent px-4 min-h-11 text-small font-semibold text-on-accent hover:bg-accent-hover transition-colors"
             >
               Sign out
             </button>
-            <a href={CUSTOMER_SITE_URL} rel="noopener" className="text-[12.5px] text-brand hover:underline">
+            <a href={CUSTOMER_SITE_URL} rel="noopener" className="text-small text-link hover:underline">
               Go to the Arifcard customer site
             </a>
           </div>

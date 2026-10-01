@@ -62,29 +62,29 @@ function LoginForm() {
     <div className="w-full max-w-[384px]">
       {/* Mobile-only wordmark so branding remains visible when left panel collapses */}
       <div className="lg:hidden mb-8">
-        <Link to="/" className="text-[18px] font-semibold tracking-tight text-[#101217] dark:text-[#F6F7F9]">
+        <Link to="/" className="text-[18px] font-semibold tracking-tight text-ink">
           Arifcard
         </Link>
       </div>
 
       {/* Heading & Subtitle */}
       <div>
-        <h1 className="text-[22px] font-semibold text-[#101217] dark:text-[#F6F7F9] tracking-tight">
+        <h1 className="text-[22px] font-semibold text-ink tracking-tight">
           Sign in
         </h1>
-        <p className="mt-1 text-sm text-[#687180] dark:text-[#A6AFBE]">
+        <p className="mt-1 text-sm text-ink-muted">
           Use the email on your account.
         </p>
       </div>
 
       {justVerified && !formError && !unverifiedEmail && (
-        <p className="mt-4 text-xs text-emerald-600 dark:text-emerald-400">
+        <p className="mt-4 text-xs text-success">
           Your email is verified. Sign in to continue.
         </p>
       )}
 
       {justReset && !formError && !unverifiedEmail && (
-        <p className="mt-4 text-xs text-emerald-600 dark:text-emerald-400">
+        <p className="mt-4 text-xs text-success">
           Your password has been updated. Sign in with your new password.
         </p>
       )}
@@ -92,13 +92,13 @@ function LoginForm() {
       {/* Form Fields */}
       <form onSubmit={handleSubmit} className="mt-6 flex flex-col gap-4" noValidate>
         {formError && (
-          <p role="alert" className="text-xs text-red-500 dark:text-red-400">
+          <p role="alert" className="text-xs text-danger">
             {formError}
           </p>
         )}
 
         {unverifiedEmail && (
-          <p role="alert" className="text-xs text-red-500 dark:text-red-400">
+          <p role="alert" className="text-xs text-danger">
             This account&apos;s email is not verified. Staff accounts are verified before access is granted.
           </p>
         )}
@@ -107,7 +107,7 @@ function LoginForm() {
         <div>
           <label
             htmlFor="login-email"
-            className="block text-[13.5px] font-medium text-[#101217] dark:text-[#F6F7F9] mb-1.5"
+            className="block text-small font-medium text-ink mb-1.5"
           >
             Email
           </label>
@@ -119,13 +119,13 @@ function LoginForm() {
             onChange={(e) => setEmail(e.target.value)}
             placeholder="you@example.com"
             aria-invalid={Boolean(fieldErrors.email) || undefined}
-            className={`h-10 w-full rounded-lg border bg-white dark:bg-[#141823] px-3 text-sm text-[#101217] dark:text-[#F6F7F9] placeholder:text-[#9CA3AF] dark:placeholder:text-[#5B6472] transition-colors duration-150 focus:outline-none focus:ring-2 focus:ring-[#8055FF]/20 ${
+            className={`h-11 w-full rounded-lg border bg-surface-1  px-3 text-sm text-ink placeholder:text-ink-muted  transition-colors duration-150 focus:outline-none focus:ring-2 focus:ring-accent/20 ${
               fieldErrors.email
-                ? "border-red-400 dark:border-red-500"
-                : "border-[#D5DAE1] dark:border-[#303643] focus:border-[#8055FF]"
+                ? "border-danger"
+                : "border-line-strong  focus:border-accent"
             }`}
           />
-          {fieldErrors.email && <p className="mt-1 text-xs text-red-500 dark:text-red-400">{fieldErrors.email}</p>}
+          {fieldErrors.email && <p className="mt-1 text-xs text-danger">{fieldErrors.email}</p>}
         </div>
 
         {/* Password Field */}
@@ -133,13 +133,13 @@ function LoginForm() {
           <div className="flex items-center justify-between mb-1.5">
             <label
               htmlFor="login-password"
-              className="text-[13.5px] font-medium text-[#101217] dark:text-[#F6F7F9]"
+              className="text-small font-medium text-ink"
             >
               Password
             </label>
             <Link
               to="/forgot-password"
-              className="text-[12.5px] text-[#687180] dark:text-[#A6AFBE] hover:text-[#101217] dark:hover:text-[#F6F7F9] transition-colors"
+              className="text-small text-ink-muted hover:text-ink transition-colors"
             >
               Forgot your password?
             </Link>
@@ -152,33 +152,33 @@ function LoginForm() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               aria-invalid={Boolean(fieldErrors.password) || undefined}
-              className={`h-10 w-full rounded-lg border bg-white dark:bg-[#141823] px-3 pr-10 text-sm text-[#101217] dark:text-[#F6F7F9] transition-colors duration-150 focus:outline-none focus:ring-2 focus:ring-[#8055FF]/20 ${
+              className={`h-11 w-full rounded-lg border bg-surface-1  px-3 pr-10 text-sm text-ink transition-colors duration-150 focus:outline-none focus:ring-2 focus:ring-accent/20 ${
                 fieldErrors.password
-                  ? "border-red-400 dark:border-red-500"
-                  : "border-[#D5DAE1] dark:border-[#303643] focus:border-[#8055FF]"
+                  ? "border-danger"
+                  : "border-line-strong  focus:border-accent"
               }`}
             />
             <button
               type="button"
               onClick={() => setShowPassword((prev) => !prev)}
               aria-label={showPassword ? "Hide password" : "Show password"}
-              className="absolute right-3 p-1 text-[#9CA3AF] dark:text-[#687180] hover:text-[#687180] dark:hover:text-[#A6AFBE] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#8055FF]/30 rounded"
+              className="absolute right-3 p-1 text-ink-muted hover:text-ink-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/30 rounded"
             >
               {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
             </button>
           </div>
-          {fieldErrors.password && <p className="mt-1 text-xs text-red-500 dark:text-red-400">{fieldErrors.password}</p>}
+          {fieldErrors.password && <p className="mt-1 text-xs text-danger">{fieldErrors.password}</p>}
         </div>
 
         {/* Submit Button */}
         <button
           type="submit"
           disabled={isLoading}
-          className="relative mt-2 h-10 w-full rounded-lg bg-[#8055FF] hover:bg-[#7447F8] active:bg-[#6C3FE0] disabled:bg-[#A98FF5] text-white text-sm font-semibold transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#8055FF]/30 flex items-center justify-center"
+          className="relative mt-2 h-11 w-full rounded-lg bg-accent hover:bg-accent-hover active:bg-accent-hover disabled:opacity-50 text-on-accent text-sm font-semibold transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/30 flex items-center justify-center"
         >
           {isLoading ? (
             <span className="flex items-center justify-center">
-              <svg className="h-4 w-4 animate-spin text-white" viewBox="0 0 24 24" fill="none">
+              <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none">
                 <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                 <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
               </svg>
@@ -190,7 +190,7 @@ function LoginForm() {
       </form>
 
       {/* No sign-up here: staff access is granted on the server only. */}
-      <p className="mt-5 text-[12.5px] text-[#687180] dark:text-[#A6AFBE]">
+      <p className="mt-5 text-small text-ink-muted">
         Staff only. Access is granted by an administrator, not requested here.
       </p>
     </div>

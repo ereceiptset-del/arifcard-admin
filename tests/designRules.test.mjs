@@ -13,6 +13,11 @@ const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const UI = join(root, "packages/ui/src");
 
 const REDESIGNED = [
+  "src/components/auth/LoginForm.jsx",
+  "src/components/auth/ForgotPasswordForm.jsx",
+  "src/components/auth/OtpInput.jsx",
+  "src/components/auth/RequireStaff.jsx",
+  "src/components/ui/ThemeToggle.jsx",
   "src/layouts/AdminLayout.jsx",
   "src/pages/admin/OverviewPage.jsx",
   "src/pages/admin/KycQueuePage.jsx",
