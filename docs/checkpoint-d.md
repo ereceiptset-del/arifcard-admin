@@ -42,3 +42,22 @@ From each app folder: `npm test`, then `npm run dev`, then open:
 
 Backend, services, auth context, hosting configuration and security rules
 are untouched across all four checkpoints. Nothing was deployed.
+
+## Release (2026-10-01)
+
+Deployed by the owner from `develop` after the gate passed (customer
+`npm test` 38/38; admin 17/17 once its bundle markers followed the renamed
+"KYC verification" section, `12d12c2`). Live entry files match the local
+builds: customer `index-DMYbpr98.js`, admin `index-Bq530pyf.js`.
+
+Read-only live checks after propagation, all passing:
+
+| Check | Result |
+|---|---|
+| Redesign: new screens in the shipped JS, Geist loaded without blocking, no dev page, harness or synthetic data published | 29/29 |
+| Customer: headers (CSP report-only, X-Frame-Options, nosniff, Permissions-Policy), deep links, staff notices, `/api` reachable, admin API refuses without a session | 21/21 |
+| Admin: enforced CSP, no-referrer, noindex, immutable assets, deep links, `/api` JSON, 401 without a session or with a forged token | 19/19 |
+
+First-load JS (raw entry): customer 259.4 KB, admin 258.0 KB (customer was
+276.4 KB before the redesign). Backend, security rules and hosting
+configuration were not part of this release.
