@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Visual harness: quality sweep</title>
+    <style>
+      body { font: 14px system-ui, sans-serif; margin: 24px; color: #121218; }
+      table { border-collapse: collapse; width: 100%; }
+      th, td { border-bottom: 1px solid #e2e2ea; padding: 6px 8px; text-align: left; vertical-align: top; }
+      .fail { color: #c0282b; font-weight: 600; }
+      .pass { color: #0b7a4b; }
+    </style>
+  </head>
+  <body>
+    <!--
+      Test tooling (dev server only, never built). Loads every dashboard
+      scenario at 360 / 768 / 1440 / 1920 px in light and dark inside a
+      sized iframe and records: axe-core violations, horizontal overflow and
+      interactive elements smaller than 44 x 44 px. axe-core is fetched
+      from cdnjs at run time; it is not a project dependency.
+      Results are also left on window.__sweep for scripts.
+    -->
+    <h1>Admin app quality sweep</h1>
+    <p id="status">Starting…</p>
+    <table>
+      <thead>
+        <tr><th>Theme</th><th>Width</th><th>Scenario</th><th>Overflow</th><th>axe</th><th>Small targets</th></tr>
+      </thead>
+      <tbody id="rows"></tbody>
+    </table>
+    <script type="module">
+      // Admin screens, as a staff member (and once as a customer, which must be refused).
+      const SCENARIOS = [
+        "/",
+        "/customers",
+        "/kyc",
+        "/kyc/visual-case-1",
+        "/payments",
+        "/cards",
+        "/transactions",
+        "/notifications",
+        "/audit",
+        "/settings",
+        "/?role=customer",
+      ].map((entry) => {
+        const [path, query] = entry.split("?");
+        return { scenario: query || "role=admin", path };
+      });
+      const WIDTHS = [360, 768, 1440, 1920];
+      const THEMES = ["light", "dark"];
+      const params = new URLSearchParams(location.search);
+      const themes = params.get("theme") ? [params.get("theme")] : THEMES;
+      const widths = params.get("width") ? [Number(params.get("width"))] : WIDTHS;
+      const statusEl = document.getElementById("status");
+      const rowsEl = document.getElementById("rows");
+      window.__sweep = { done: false, rows: [] };
+
+      const axeSource = await (await fetch("https://cdnjs.cloudflare.com/ajax/libs/axe-core/4.10.2/axe.min.js")).text();
+      const previousTheme = localStorage.getItem("addiscard-theme");
+
+      for (const theme of themes) {
+        localStorage.setItem("addiscard-theme", theme);
+        for (const width of widths) {
+          for (const { scenario, path } of SCENARIOS) {
+            statusEl.textContent = `Running ${theme} ${width}px ${scenario} ${path}…`;
+            const frame = document.createElement("iframe");
+            frame.style.cssText = `width:${width}px;height:900px;border:0;position:absolute;left:-99999px;top:0`;
+            frame.src = `./admin.html?${scenario}&path=${encodeURIComponent(path)}`;
+            document.body.appendChild(frame);
+            await new Promise((resolve) => (frame.onload = resolve));
+            const win = frame.contentWindow;
+            const doc = frame.contentDocument;
+            const started = Date.now();
+            while (Date.now() - started < 15000) {
+              await new Promise((resolve) => setTimeout(resolve, 250));
+              if ((doc.querySelector("main h1") || doc.querySelector("h1")) && !doc.querySelector('main [aria-busy="true"]')) break;
+            }
+            await new Promise((resolve) => setTimeout(resolve, 700));
+            win.eval(axeSource);
+            const result = await win.axe.run(doc, { resultTypes: ["violations"] });
+            const overflow = doc.documentElement.scrollWidth - doc.documentElement.clientWidth;
+            const small = [...doc.querySelectorAll("a, button, [role=button], input, select, textarea")]
+              .filter((el) => {
+                const box = el.getBoundingClientRect();
+                // Inline links inside a sentence are exempt (WCAG 2.5.8); radios and checkboxes sit inside a 44 px label.
+                return box.width > 0 && box.height > 0 && (box.height < 44 || box.width < 44) && !["checkbox", "radio"].includes(el.type) && !el.closest("p") && !el.classList.contains("sr-only");
+              })
+              .map((el) => `${(el.innerText || el.getAttribute("aria-label") || el.tagName).trim().slice(0, 24)} ${Math.round(el.getBoundingClientRect().width)}x${Math.round(el.getBoundingClientRect().height)}`);
+            const violations = result.violations.map((v) => `${v.impact}: ${v.id} (${v.nodes.length})`);
+            const row = { theme, width, scenario: `${scenario} ${path}`, dark: doc.documentElement.classList.contains("dark"), overflow, violations, small };
+            window.__sweep.rows.push(row);
+            const tr = document.createElement("tr");
+            tr.innerHTML = `<td>${theme}${row.dark === (theme === "dark") ? "" : " (mismatch)"}</td><td>${width}</td><td>${scenario}</td>
+              <td class="${overflow ? "fail" : "pass"}">${overflow}</td>
+              <td class="${violations.length ? "fail" : "pass"}">${violations.join("<br>") || "0"}</td>
+              <td class="${small.length ? "fail" : "pass"}">${small.join("<br>") || "none"}</td>`;
+            rowsEl.appendChild(tr);
+            frame.remove();
+          }
+        }
+      }
+
+      if (previousTheme) localStorage.setItem("addiscard-theme", previousTheme);
+      else localStorage.removeItem("addiscard-theme");
+      const rows = window.__sweep.rows;
+      const summary = {
+        cases: rows.length,
+        overflow: rows.filter((r) => r.overflow).length,
+        criticalOrSerious: rows.flatMap((r) => r.violations).filter((v) => /^(critical|serious)/.test(v)).length,
+        otherViolations: rows.flatMap((r) => r.violations).filter((v) => !/^(critical|serious)/.test(v)).length,
+        smallTargets: rows.filter((r) => r.small.length).length,
+        themeMismatch: rows.filter((r) => r.dark !== (r.theme === "dark")).length,
+      };
+      window.__sweep.summary = summary;
+      window.__sweep.done = true;
+      statusEl.textContent = `Done: ${JSON.stringify(summary)}`;
+    </script>
+  </body>
+</html>

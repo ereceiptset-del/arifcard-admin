@@ -16,3 +16,9 @@ last. Plan: `docs/design-plan.md` (shared with the customer app). Inventory: `do
 | D9 | 2026-10-01 | Cardholder line shows the account name from the profile | Leave the name off | The issuer view has no name; the account name is real data and labelled as such |
 | D10 | 2026-10-01 | Brief's "Updated" freshness wording changed to "Checked" | "Updated N min ago" | We know when we fetched, not when the issuer changed the value |
 | D11 | 2026-10-01 | Unavailable card actions grouped with one reason, hidden when there is no card | Four equal buttons with three disabled | A row of disabled buttons reads as broken (critique #4) |
+| C1 | 2026-10-01 | Admin uses the same design system as the customer app, in a wide, denser shell with global search and an issuer environment chip | A separate admin look | One system to maintain; the brief asks for a visibly different operations layout, which the shell options provide |
+| C2 | 2026-10-01 | Overview keeps every old figure with the same value and adds the ones the API already returned | A smaller KPI set | Parity is a gate; hidden fields were real data |
+| C3 | 2026-10-01 | KYC decision inline in the third pane, with a confirm step | Decision in a modal | The reviewer sees documents, details and the decision together; the confirm protects an irreversible action |
+| C4 | 2026-10-01 | Card operations built on the existing provider operations/events endpoints via an admin-side data module | Adding functions to packages/services | packages/services is a frozen zone; the endpoints and their protection already exist |
+| C5 | 2026-10-01 | Four separate pills per card order (payment verified, issuer funded, card issued, card active) | One merged status | The brief forbids conflating them; each is derived from its own field |
+| C6 | 2026-10-01 | Admin Transactions keeps its empty state | Listing payment claims as transactions | No ledger exists; claims are not accounted money |
