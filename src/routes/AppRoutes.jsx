@@ -14,13 +14,12 @@ const ForgotPasswordPage = lazy(() => import("../pages/auth/ForgotPasswordPage")
 const AdminLayout = lazy(() => import("../layouts/AdminLayout"));
 const OverviewPage = lazy(() => import("../pages/admin/OverviewPage"));
 const CustomersPage = lazy(() => import("../pages/admin/CustomersPage"));
-const CardsPage = lazy(() => import("../pages/admin/CardsPage"));
+const CardOperationsPage = lazy(() => import("../pages/admin/CardOperationsPage"));
 const PaymentsPage = lazy(() => import("../pages/admin/PaymentsPage"));
 const SettingsPage = lazy(() => import("../pages/admin/SettingsPage"));
 const TransactionsPage = lazy(() => import("../pages/admin/TransactionsPage"));
 const NotificationsPage = lazy(() => import("../pages/admin/NotificationsPage"));
 const AuditLogPage = lazy(() => import("../pages/admin/AuditLogPage"));
-const CardOrdersPage = lazy(() => import("../pages/admin/CardOrdersPage"));
 const KycQueuePage = lazy(() => import("../pages/admin/KycQueuePage"));
 const KycCasePage = lazy(() => import("../pages/admin/KycCasePage"));
 
@@ -68,11 +67,12 @@ function AppRoutes() {
         >
           <Route index element={<OverviewPage />} />
           <Route path="customers" element={<CustomersPage />} />
-          <Route path="cards" element={<CardsPage />} />
+          <Route path="cards" element={<CardOperationsPage />} />
           <Route path="payments" element={<PaymentsPage />} />
           <Route path="kyc" element={<KycQueuePage />} />
           <Route path="kyc/:caseId" element={<KycCasePage />} />
-          <Route path="card-orders" element={<CardOrdersPage />} />
+          {/* Card orders and cards are one screen now: Card operations. */}
+          <Route path="card-orders" element={<Navigate to="/cards" replace />} />
           <Route path="transactions" element={<TransactionsPage />} />
           <Route path="notifications" element={<NotificationsPage />} />
           <Route path="audit" element={<AuditLogPage />} />

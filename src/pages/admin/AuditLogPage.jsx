@@ -1,6 +1,6 @@
 import { useCallback, useState } from "react";
 import { ScrollText } from "lucide-react";
-import { Panel, Table, Badge, ErrorState, EmptyState, Skeleton } from "@addiscard/ui";
+import { Panel, PageHeader, Table, StatusPill, Drawer, ErrorState, EmptyState, Skeleton, formatDateTime } from "@addiscard/ui";
 import { adminService } from "@addiscard/services";
 import { useAsync } from "../../hooks/useAsync.js";
 
@@ -13,117 +13,156 @@ import { useAsync } from "../../hooks/useAsync.js";
  *
  * It records *that* something happened and who did it — never the
  * contents of a document, a receipt token or a customer's details. A log
- * that carried those would itself be worth stealing.
+ * that carried those would itself be worth stealing. The detail view shows
+ * only the fields the backend stored on the entry.
  */
 
-const FILTERS = [
-  { value: "all", label: "All" },
-  { value: "kyc.decision", label: "KYC decisions" },
-  { value: "staff.owner.granted", label: "Ownership" },
+// Every action the backend writes (backend services; scripts/provision-owner.mjs).
+const ACTIONS = [
+  ["kyc.claim", "KYC review started"],
+  ["kyc.decision", "KYC decision"],
+  ["payment.recheck", "Payment re-checked"],
+  ["payment.staff_decision", "Payment decided by staff"],
+  ["payment.decision", "Payment decided"],
+  ["card.order.created", "Card ordered"],
+  ["card.order.issuance", "Card issuance"],
+  ["card.order.resolved", "Card order resolved"],
+  ["provider.funding.created", "Funding created"],
+  ["provider.funding.status", "Funding status"],
+  ["provider.funding.resolved", "Funding resolved"],
+  ["provider.operation", "Issuer operation"],
+  ["provider.operation.reconcile_requested", "Issuer asked again"],
+  ["provider.operation.resolved", "Issuer operation resolved"],
+  ["provider.event.applied", "Issuer event applied"],
+  ["provider.event.reprocess", "Issuer event reprocessed"],
+  ["staff.owner.granted", "Ownership granted"],
 ];
+const LABEL = Object.fromEntries(ACTIONS);
+const tone = (action) => (action === "staff.owner.granted" ? "danger" : action.startsWith("kyc") ? "accent" : action.startsWith("payment") ? "info" : "neutral");
 
-const TONE = {
-  "kyc.decision": "brand",
-  "staff.owner.granted": "danger",
+/** Human labels for fields entries commonly carry. */
+const FIELD_LABEL = {
+  fromStatus: "Old state",
+  toStatus: "New state",
+  from: "Old state",
+  to: "New state",
+  decision: "Decision",
+  reasonCode: "Reason code",
+  version: "Version",
+  operationId: "Operation",
+  orderId: "Order",
+  intentId: "Payment",
+  claimId: "Claim",
+  resolution: "Resolution",
 };
 
 export default function AuditLogPage() {
   const [action, setAction] = useState("all");
+  const [open, setOpen] = useState(null);
   const load = useCallback(() => adminService.auditLog({ action }), [action]);
   const { data, error, loading, reload } = useAsync(load, [action]);
-
   const entries = data?.entries || [];
 
   const columns = [
-    {
-      key: "action",
-      header: "Action",
-      render: (row) => <Badge tone={TONE[row.action] || "neutral"}>{row.action}</Badge>,
-    },
-    {
-      key: "actor",
-      header: "Who",
-      render: (row) => (
-        <span className="font-mono text-[12px]">{row.actorName || row.actorUid || "—"}</span>
-      ),
-    },
+    { key: "action", header: "Action", render: (row) => <StatusPill tone={tone(row.action)} icon={null}>{LABEL[row.action] || row.action}</StatusPill> },
+    { key: "actor", header: "Who", render: (row) => row.actorName || row.actorUid || "System" },
     {
       key: "subject",
-      header: "Subject",
+      header: "Resource",
+      hideBelow: "md",
       render: (row) => (
-        <span className="font-mono text-[12px]">
-          {row.subjectType ? `${row.subjectType}/` : ""}
-          {row.subjectId || "—"}
+        <span className="block min-w-0">
+          <span className="block truncate">{row.subjectType || "Record"}</span>
+          <span className="block truncate text-caption text-ink-muted">{row.subjectId || "No ID"}</span>
         </span>
       ),
     },
-    {
-      key: "detail",
-      header: "Detail",
-      render: (row) =>
-        row.detail ? (
-          <span className="text-[12px] text-ink-muted dark:text-ink-muted-dark">
-            {Object.entries(row.detail)
-              .map(([k, v]) => `${k}: ${typeof v === "object" ? JSON.stringify(v) : v}`)
-              .join(" · ")}
-          </span>
-        ) : (
-          "—"
-        ),
-    },
-    {
-      key: "createdAt",
-      header: "When",
-      render: (row) => (row.createdAt ? new Date(row.createdAt).toLocaleString() : "—"),
-    },
+    { key: "change", header: "Change", hideBelow: "lg", render: (row) => change(row.detail) || <span className="text-ink-muted">Not recorded</span> },
+    { key: "createdAt", header: "When", render: (row) => (row.createdAt ? formatDateTime(row.createdAt) : "Not recorded") },
   ];
 
   return (
-    <>
-      <h1 className="text-[22px] font-semibold tracking-tight text-ink dark:text-ink-dark">Audit logs</h1>
-      <p className="mt-1 text-[13.5px] text-ink-muted dark:text-ink-muted-dark">
-        Who did what, and when. Append-only — nothing here can be edited or removed.
-      </p>
+    <div className="flex flex-col gap-6">
+      <PageHeader title="Audit logs" description="Who did what, and when. Append-only: nothing here can be edited or removed." />
 
-      <div className="mt-5 flex flex-wrap gap-2">
-        {FILTERS.map((filter) => (
-          <button
-            key={filter.value}
-            type="button"
-            onClick={() => setAction(filter.value)}
-            className={`rounded-full border px-3 py-1.5 text-[12.5px] ${
-              action === filter.value
-                ? "border-brand bg-brand/10 text-brand"
-                : "border-line dark:border-line-dark text-ink-muted dark:text-ink-muted-dark"
-            }`}
-          >
-            {filter.label}
-          </button>
-        ))}
+      <div className="flex flex-wrap items-end gap-3">
+        <div>
+          <label htmlFor="audit-action" className="mb-1.5 block text-small font-medium text-ink">
+            Action
+          </label>
+          <select id="audit-action" value={action} onChange={(event) => setAction(event.target.value)} className="h-11 rounded-control border border-line-strong bg-surface-1 px-3 text-small text-ink">
+            <option value="all">All actions</option>
+            {ACTIONS.map(([value, label]) => (
+              <option key={value} value={value}>
+                {label}
+              </option>
+            ))}
+          </select>
+        </div>
+        <p className="pb-3 text-caption text-ink-muted">The 100 most recent entries for the chosen action.</p>
       </div>
 
-      <div className="mt-5">
-        <Panel padded={false}>
-          {loading && (
-            <div className="p-5">
-              <Skeleton className="h-[160px] w-full" />
-            </div>
-          )}
-          {!loading && error && (
-            <div className="p-5">
-              <ErrorState title="Could not load the audit log" message={error.message} onRetry={reload} />
-            </div>
-          )}
-          {!loading && !error && entries.length === 0 && (
-            <EmptyState
-              icon={ScrollText}
-              title="Nothing recorded yet"
-              description="Decisions, ownership changes and other sensitive actions appear here as they happen."
-            />
-          )}
-          {!loading && !error && entries.length > 0 && <Table columns={columns} rows={entries} />}
-        </Panel>
-      </div>
-    </>
+      <Panel padded={false}>
+        {loading && (
+          <div aria-busy="true" className="flex flex-col gap-2 p-4 sm:p-6">
+            <Skeleton className="h-12 w-full" />
+            <Skeleton className="h-12 w-full" />
+          </div>
+        )}
+        {!loading && error && (
+          <div className="p-4 sm:p-6">
+            <ErrorState title="We couldn't load the audit log" error={error} onRetry={reload} />
+          </div>
+        )}
+        {!loading && !error && entries.length === 0 && (
+          <EmptyState headingLevel={2} icon={ScrollText} title="Nothing recorded yet" description="Decisions, ownership changes and other sensitive actions appear here as they happen." />
+        )}
+        {!loading && !error && entries.length > 0 && <Table caption="Audit entries" columns={columns} rows={entries} onRowClick={setOpen} />}
+      </Panel>
+
+      {open && (
+        <Drawer open onClose={() => setOpen(null)} title={LABEL[open.action] || open.action} description={open.createdAt ? formatDateTime(open.createdAt) : undefined}>
+          <div className="flex flex-col gap-5">
+            <dl className="divide-y divide-line rounded-control border border-line">
+              <Fact label="Action" value={open.action} />
+              <Fact label="Who" value={open.actorName || open.actorUid || "System"} />
+              <Fact label="Staff ID" value={open.actorUid} />
+              <Fact label="Resource" value={open.subjectType} />
+              <Fact label="Resource ID" value={open.subjectId} />
+              <Fact label="Entry ID" value={open.id} />
+            </dl>
+            <section>
+              <h3 className="text-h3 text-ink">Recorded detail</h3>
+              {open.detail && Object.keys(open.detail).length ? (
+                <dl className="mt-3 divide-y divide-line rounded-control border border-line">
+                  {Object.entries(open.detail).map(([key, value]) => (
+                    <Fact key={key} label={FIELD_LABEL[key] || key} value={typeof value === "object" && value !== null ? JSON.stringify(value) : String(value)} />
+                  ))}
+                </dl>
+              ) : (
+                <p className="mt-2 text-small text-ink-muted">No further detail was recorded.</p>
+              )}
+            </section>
+          </div>
+        </Drawer>
+      )}
+    </div>
+  );
+}
+
+function change(detail) {
+  if (!detail) return null;
+  const from = detail.fromStatus ?? detail.from;
+  const to = detail.toStatus ?? detail.to ?? detail.decision ?? detail.resolution;
+  if (from && to) return `${from} to ${to}`;
+  return to || null;
+}
+
+function Fact({ label, value }) {
+  return (
+    <div className="grid grid-cols-[minmax(0,2fr)_minmax(0,3fr)] gap-4 px-4 py-2.5">
+      <dt className="text-small text-ink-muted">{label}</dt>
+      <dd className="min-w-0 break-words text-right text-small text-ink">{value || <span className="text-ink-muted">Not recorded</span>}</dd>
+    </div>
   );
 }

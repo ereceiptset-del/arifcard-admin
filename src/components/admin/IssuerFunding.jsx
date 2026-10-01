@@ -1,6 +1,6 @@
 import { useCallback, useMemo, useState } from "react";
 import { RefreshCw, Plus, AlertTriangle } from "lucide-react";
-import { Badge, Button, Skeleton, TextInput, SelectInput, TextArea, useToast } from "@addiscard/ui";
+import { StatusPill, Button, Skeleton, TextInput, SelectInput, TextArea, useToast } from "@addiscard/ui";
 import { adminService } from "@addiscard/services";
 import { useAsync } from "../../hooks/useAsync.js";
 
@@ -45,7 +45,7 @@ export default function IssuerFunding({ uid }) {
       (data?.options || []).flatMap((asset) =>
         asset.networks
           .filter((n) => n.mode === "convert" && n.available)
-          .map((n) => ({ value: `${asset.coin}|${n.network}`, label: `${asset.coin} on ${n.label || n.network}${n.feePct ? ` · ${n.feePct}% fee` : ""}${n.feeNetworkUsd ? ` + $${n.feeNetworkUsd}` : ""}` }))
+          .map((n) => ({ value: `${asset.coin}|${n.network}`, label: `${asset.coin} on ${n.label || n.network}${n.feePct ? `, ${n.feePct}% fee` : ""}${n.feeNetworkUsd ? ` + $${n.feeNetworkUsd}` : ""}` }))
       ),
     [data]
   );
@@ -73,30 +73,30 @@ export default function IssuerFunding({ uid }) {
 
   return (
     <div>
-      <p className="text-[13px] font-medium text-ink dark:text-ink-dark">Card funding (USDC collateral)</p>
+      <p className="text-small font-medium text-ink">Card funding (USDC collateral)</p>
       {loading && <Skeleton className="mt-2 h-[80px] w-full" />}
-      {!loading && error && <p className="mt-2 text-[12.5px] text-danger">{error.message}</p>}
+      {!loading && error && <p className="mt-2 text-small text-danger">{error.message}</p>}
       {!loading && data && (
         <div className="mt-2 flex flex-col gap-3">
           {!data.route.ready && (
-            <p className="flex items-start gap-2 rounded-panel border border-line dark:border-line-dark px-4 py-3 text-[12.5px] text-ink-muted dark:text-ink-muted-dark">
+            <p className="flex items-start gap-2 rounded-control border border-line px-4 py-3 text-small text-ink-muted">
               <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
               <span>Blocked: {data.route.reason}</span>
             </p>
           )}
-          {data.problem && <p className="text-[12.5px] text-ink-muted dark:text-ink-muted-dark">{data.problem}</p>}
+          {data.problem && <p className="text-small text-ink-muted">{data.problem}</p>}
           {data.balances && (
-            <p className="text-[12px] text-ink-faint">
-              Issuer balance: {Object.entries(data.balances.values).map(([k, v]) => `${k} ${v}`).join(" · ") || "—"}. {data.balances.note}
+            <p className="text-caption text-ink-muted">
+              Issuer balance: {Object.entries(data.balances.values).map(([k, v]) => `${k} ${v}`).join(", ") || "—"}. {data.balances.note}
             </p>
           )}
 
           {data.route.ready && choices.length > 0 && !data.records.some((r) => OPEN.includes(r.status)) && (
-            <div className="grid gap-3 rounded-panel border border-line dark:border-line-dark p-4 sm:grid-cols-[1fr_2fr_2fr_auto] sm:items-end">
+            <div className="grid gap-3 rounded-control border border-line p-4 sm:grid-cols-[1fr_2fr_2fr_auto] sm:items-end">
               <SelectInput
                 label="For card order"
                 placeholder="Not linked to an order"
-                options={awaiting.map((o) => ({ value: o.id, label: `${o.paymentReference || o.id} · paid ${(o.paymentAmountMinor / 100).toFixed(2)} ETB` }))}
+                options={awaiting.map((o) => ({ value: o.id, label: `${o.paymentReference || o.id}, paid ${(o.paymentAmountMinor / 100).toFixed(2)} ETB` }))}
                 value={form.orderId}
                 onChange={(e) => setForm({ ...form, orderId: e.target.value })}
               />
@@ -109,9 +109,9 @@ export default function IssuerFunding({ uid }) {
           )}
 
           {data.records.length === 0 ? (
-            <p className="text-[12.5px] text-ink-faint">No funding recorded.</p>
+            <p className="text-small text-ink-muted">No funding recorded.</p>
           ) : (
-            <ul className="divide-y divide-line dark:divide-line-dark rounded-panel border border-line dark:border-line-dark">
+            <ul className="divide-y divide-line rounded-control border border-line">
               {data.records.map((r) => (
                 <FundingRow key={r.id} record={r} busy={busy} act={act} />
               ))}
@@ -129,13 +129,13 @@ function FundingRow({ record: r, busy, act }) {
   const acceptable = ["PARTIALLY_FUNDED", "DISCREPANCY"].includes(r.status);
 
   return (
-    <li className="px-4 py-3 text-[12.5px]">
+    <li className="px-4 py-3 text-small">
       <div className="flex flex-wrap items-center gap-2">
-        <Badge tone={TONE[r.status]}>{LABEL[r.status] || r.status}</Badge>
-        <span className="font-mono">
+        <StatusPill tone={TONE[r.status]}>{LABEL[r.status] || r.status}</StatusPill>
+        <span className="">
           {r.confirmedUsdc} / {r.expectedUsdc} USDC
         </span>
-        <span className="text-ink-faint">fees {r.feesUsd} USD · {r.coin} on {r.network}{r.orderId ? ` · for order ${r.orderId}` : " · no card order"}</span>
+        <span className="text-ink-muted">fees {r.feesUsd} USD, {r.coin} on {r.network}{r.orderId ? `, for order ${r.orderId}` : ", no card order"}</span>
         {open && (
           <Button variant="secondary" size="sm" icon={RefreshCw} loading={busy === `sync-${r.id}`} onClick={() => act(`sync-${r.id}`, () => adminService.syncIssuerFunding(r.id))} className="ml-auto">
             Check deposits
@@ -144,26 +144,27 @@ function FundingRow({ record: r, busy, act }) {
       </div>
 
       {open && r.instruction && (
-        <p className="mt-2 text-ink-muted dark:text-ink-muted-dark">
-          Deposit address (fetched {new Date(r.instruction.fetchedAt).toLocaleString()}): <span className="break-all font-mono">{r.instruction.depositAddress}</span>
+        <p className="mt-2 text-ink-muted">
+          Deposit address (fetched {new Date(r.instruction.fetchedAt).toLocaleString()}): <span className="break-all ">{r.instruction.depositAddress}</span>
           <br />
-          Send only {r.coin} on {r.network}. Another coin or network can lose the funds. This is the sandbox: send nothing real.
+          Send only {r.coin} on {r.network}. Another coin or network can lose the funds.
+          {r.environment === "sandbox" ? " This is the sandbox: send nothing real." : r.environment ? ` Environment: ${r.environment}.` : ""}
         </p>
       )}
 
       {r.deposits.length > 0 && (
-        <ul className="mt-2 flex flex-col gap-1 text-ink-faint">
+        <ul className="mt-2 flex flex-col gap-1 text-ink-muted">
           {r.deposits.map((d) => (
-            <li key={d.orderRef} className="font-mono text-[11.5px]">
-              {d.orderRef} · {d.status} · in {d.amountIn ?? "—"} {d.coin} · credited {d.creditedUsdc ?? "—"} USDC · fees {d.feesUsd ?? "—"}
+            <li key={d.orderRef} className="text-caption">
+              {d.orderRef}, {d.status}, in {d.amountIn ?? "—"} {d.coin}, credited {d.creditedUsdc ?? "—"} USDC, fees {d.feesUsd ?? "—"}
             </li>
           ))}
         </ul>
       )}
 
-      {r.lastSyncProblem && <p className="mt-1 text-ink-faint">Last check: {r.lastSyncProblem}</p>}
+      {r.lastSyncProblem && <p className="mt-1 text-ink-muted">Last check: {r.lastSyncProblem}</p>}
       {r.resolution && (
-        <p className="mt-1 text-ink-faint">
+        <p className="mt-1 text-ink-muted">
           {r.resolution.resolution} by {r.resolution.by}: {r.resolution.reason}
         </p>
       )}
