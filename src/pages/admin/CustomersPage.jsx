@@ -1,6 +1,7 @@
-import { useCallback, useState } from "react";
-import { Users, X, RefreshCw } from "lucide-react";
-import { Panel, Table, Badge, ErrorState, EmptyState, Skeleton, TextInput, Dialog, Button, useToast } from "@addiscard/ui";
+import { useCallback, useEffect, useState } from "react";
+import { Link, useSearchParams } from "react-router-dom";
+import { Users, RefreshCw, Search } from "lucide-react";
+import { Panel, PageHeader, Table, StatusPill, ErrorState, EmptyState, Skeleton, Drawer, Tabs, TabPanel, Button, useToast, formatMoney, formatDate, formatDateTime } from "@addiscard/ui";
 import {
   adminService,
   ISSUER_ONBOARDING_LABEL,
@@ -11,7 +12,6 @@ import {
   KYC_STATUS_LABEL,
   KYC_STATUS_TONE,
   KYC_METHOD_LABEL,
-  birr,
 } from "@addiscard/services";
 import { useAsync } from "../../hooks/useAsync.js";
 import IssuerFunding from "../../components/admin/IssuerFunding.jsx";
@@ -27,7 +27,8 @@ import IssuerCardOrders from "../../components/admin/IssuerCardOrders.jsx";
  * of browsing.
  *
  * Search still matches the real email, because a staff member given an
- * address needs to find the account it belongs to.
+ * address needs to find the account it belongs to. Search and filter live
+ * in the URL (the header's global search lands here).
  *
  * Staff accounts are excluded by the backend. They are not customers, and
  * showing them here invites someone to act on a colleague's record.
@@ -43,237 +44,253 @@ const FILTERS = [
   { value: KYC_STATUS.REJECTED, label: "Rejected" },
 ];
 
+const accountPill = (row) =>
+  row.disabled ? { tone: "danger", label: "Disabled" } : row.emailVerified ? { tone: "success", label: "Active" } : { tone: "attention", label: "Email not confirmed" };
+
 export default function CustomersPage() {
-  const [q, setQ] = useState("");
-  const [kycStatus, setKycStatus] = useState("all");
+  const [searchParams, setSearchParams] = useSearchParams();
+  const q = searchParams.get("q") || "";
+  const kycStatus = searchParams.get("kyc") || "all";
+  const [query, setQuery] = useState(q);
   const [openUid, setOpenUid] = useState(null);
+
+  // Follow the header search when it changes the URL while this page is open.
+  useEffect(() => setQuery(q), [q]);
 
   const load = useCallback(() => adminService.customers({ q, kycStatus }), [q, kycStatus]);
   const { data, error, loading, reload } = useAsync(load, [q, kycStatus]);
-
   const rows = data?.customers || [];
+
+  const update = (key, value) => {
+    const next = new URLSearchParams(searchParams);
+    if (value && value !== "all") next.set(key, value);
+    else next.delete(key);
+    setSearchParams(next, { replace: true });
+  };
 
   const columns = [
     {
       key: "customer",
       header: "Customer",
       render: (row) => (
-        <div className="min-w-0">
-          <p className="truncate font-medium text-ink dark:text-ink-dark">{row.name || "—"}</p>
-          <p className="truncate font-mono text-[12px] text-ink-faint">{row.email}</p>
-        </div>
+        <span className="block min-w-0">
+          <span className="block truncate">{row.name || "Name not given"}</span>
+          <span className="block truncate text-caption font-normal text-ink-muted">{row.email}</span>
+        </span>
       ),
     },
     {
       key: "account",
       header: "Account",
-      render: (row) => (
-        <Badge tone={row.active ? "ok" : "warn"}>
-          {row.disabled ? "Disabled" : row.emailVerified ? "Active" : "Unverified"}
-        </Badge>
-      ),
+      hideBelow: "md",
+      render: (row) => {
+        const pill = accountPill(row);
+        return <StatusPill tone={pill.tone}>{pill.label}</StatusPill>;
+      },
     },
     {
       key: "kyc",
-      header: "Identity",
+      header: "KYC",
       render: (row) => (
-        <div className="min-w-0">
-          <Badge tone={KYC_STATUS_TONE[row.kycStatus] || "neutral"}>
-            {KYC_STATUS_LABEL[row.kycStatus] || row.kycStatus}
-          </Badge>
-          {row.kycMethod && (
-            <p className="mt-1 text-[11px] text-ink-faint">{KYC_METHOD_LABEL[row.kycMethod] || row.kycMethod}</p>
-          )}
-        </div>
+        <span className="block">
+          <StatusPill tone={KYC_STATUS_TONE[row.kycStatus] || "neutral"}>{KYC_STATUS_LABEL[row.kycStatus] || row.kycStatus}</StatusPill>
+          {row.kycMethod && <span className="mt-1 block text-caption text-ink-muted">{KYC_METHOD_LABEL[row.kycMethod] || row.kycMethod}</span>}
+        </span>
       ),
     },
-    { key: "paymentCount", header: "Payments", align: "right" },
-    {
-      key: "createdAt",
-      header: "Joined",
-      render: (row) => (row.createdAt ? new Date(row.createdAt).toLocaleDateString() : "—"),
-    },
-    {
-      key: "actions",
-      header: "",
-      align: "right",
-      render: (row) => (
-        <Button variant="secondary" onClick={() => setOpenUid(row.uid)}>
-          Open
-        </Button>
-      ),
-    },
+    { key: "paymentCount", header: "Payments", align: "right", hideBelow: "lg" },
+    { key: "createdAt", header: "Joined", hideBelow: "lg", render: (row) => (row.createdAt ? formatDate(row.createdAt) : "Not recorded") },
   ];
 
   return (
-    <>
-      <h1 className="text-[22px] font-semibold tracking-tight text-ink dark:text-ink-dark">Customers</h1>
-      <p className="mt-1 text-[13.5px] text-ink-muted dark:text-ink-muted-dark">
-        Everyone with an account. Email addresses are masked here — open a customer to see the full record.
-      </p>
+    <div className="flex flex-col gap-6">
+      <PageHeader title="Customers" description="Everyone with an account. Email addresses are masked here; open a customer to see the full record." />
 
-      <div className="mt-5 flex flex-wrap items-end gap-3">
-        <TextInput
-          label="Search"
-          placeholder="Name, email or ID"
-          value={q}
-          onChange={(event) => setQ(event.target.value)}
-          className="w-full sm:w-72"
-        />
-        <div className="flex flex-wrap gap-2 pb-1">
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+        <div role="group" aria-label="KYC status" className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1">
           {FILTERS.map((filter) => (
             <button
               key={filter.value}
               type="button"
-              onClick={() => setKycStatus(filter.value)}
-              className={`rounded-full border px-3 py-1.5 text-[12.5px] ${
-                kycStatus === filter.value
-                  ? "border-brand bg-brand/10 text-brand"
-                  : "border-line dark:border-line-dark text-ink-muted dark:text-ink-muted-dark"
+              aria-pressed={kycStatus === filter.value}
+              onClick={() => update("kyc", filter.value)}
+              className={`min-h-11 shrink-0 rounded-full border px-4 text-small font-medium ${
+                kycStatus === filter.value ? "border-accent bg-accent-soft text-accent-ink" : "border-line-strong bg-surface-1 text-ink-soft hover:bg-surface-2"
               }`}
             >
               {filter.label}
             </button>
           ))}
         </div>
+        <form
+          role="search"
+          className="flex gap-2"
+          onSubmit={(event) => {
+            event.preventDefault();
+            update("q", query.trim());
+          }}
+        >
+          <label htmlFor="customer-search" className="sr-only">
+            Search customers by name, email or ID
+          </label>
+          <input
+            id="customer-search"
+            type="search"
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            placeholder="Name, email or ID"
+            className="h-11 w-full min-w-0 rounded-control border border-line-strong bg-surface-1 px-3 text-small text-ink placeholder:text-ink-muted focus:outline-none focus:ring-2 focus:ring-accent/25 lg:w-72"
+          />
+          <Button type="submit" variant="secondary" icon={Search}>
+            Search
+          </Button>
+        </form>
       </div>
 
-      <div className="mt-5">
-        <Panel padded={false}>
-          {loading && (
-            <div className="p-5">
-              <Skeleton className="h-[180px] w-full" />
-            </div>
-          )}
-          {!loading && error && (
-            <div className="p-5">
-              <ErrorState title="Could not load customers" message={error.message} onRetry={reload} />
-            </div>
-          )}
-          {!loading && !error && rows.length === 0 && (
-            <EmptyState
-              icon={Users}
-              title={q || kycStatus !== "all" ? "No customers match" : "No customers yet"}
-              description={
-                q || kycStatus !== "all"
-                  ? "Try a different search or filter."
-                  : "Accounts appear here as people register."
-              }
-            />
-          )}
-          {!loading && !error && rows.length > 0 && <Table columns={columns} rows={rows} />}
-        </Panel>
-      </div>
+      <Panel padded={false}>
+        {loading && (
+          <div aria-busy="true" className="flex flex-col gap-2 p-4 sm:p-6">
+            <Skeleton className="h-12 w-full" />
+            <Skeleton className="h-12 w-full" />
+            <Skeleton className="h-12 w-full" />
+          </div>
+        )}
+        {!loading && error && (
+          <div className="p-4 sm:p-6">
+            <ErrorState title="We couldn't load customers" error={error} onRetry={reload} />
+          </div>
+        )}
+        {!loading && !error && rows.length === 0 && (
+          <EmptyState
+            headingLevel={2}
+            icon={Users}
+            title={q || kycStatus !== "all" ? "No customers match" : "No customers yet"}
+            description={q || kycStatus !== "all" ? "Try a different search or filter." : "Accounts appear here as people register."}
+          />
+        )}
+        {!loading && !error && rows.length > 0 && <Table caption="Customers" keyField="uid" columns={columns} rows={rows} onRowClick={(row) => setOpenUid(row.uid)} />}
+      </Panel>
 
       {data?.truncated && (
-        <p className="mt-4 text-[12px] text-warn">
+        <p role="note" className="rounded-control bg-warning-tint px-4 py-3 text-small text-ink">
           More accounts exist than this page lists. Narrow the search to see the rest.
         </p>
       )}
 
-      <CustomerDialog uid={openUid} onClose={() => setOpenUid(null)} />
-    </>
+      {openUid && <CustomerDrawer uid={openUid} onClose={() => setOpenUid(null)} />}
+    </div>
   );
 }
 
+const TABS = [
+  { value: "overview", label: "Overview" },
+  { value: "kyc", label: "KYC" },
+  { value: "payments", label: "Payments" },
+  { value: "issuer", label: "Card issuer" },
+  { value: "cards", label: "Cards and funding" },
+];
+
 /** One customer in full. The only place the real email is shown. */
-function CustomerDialog({ uid, onClose }) {
-  const load = useCallback(
-    () => (uid ? adminService.customer(uid) : Promise.resolve(null)),
-    [uid]
-  );
+function CustomerDrawer({ uid, onClose }) {
+  const load = useCallback(() => adminService.customer(uid), [uid]);
   const { data, error, loading } = useAsync(load, [uid]);
   const customer = data?.customer;
+  const [tab, setTab] = useState("overview");
 
   return (
-    <Dialog open={Boolean(uid)} onClose={onClose} title="Customer" size="lg">
-      {loading && <Skeleton className="h-[240px] w-full" />}
-      {!loading && error && <ErrorState title="Could not load this customer" message={error.message} />}
+    <Drawer open onClose={onClose} title={customer?.name || "Customer"} description={customer?.email} width="max-w-3xl">
+      {loading && <Skeleton className="h-[320px] w-full rounded-panel" />}
+      {!loading && error && <ErrorState title="We couldn't load this customer" error={error} />}
 
       {!loading && customer && (
-        <div className="flex flex-col gap-5">
-          <dl className="rounded-panel border border-line dark:border-line-dark">
-            <Row label="Name" value={customer.name || "—"} />
-            <Row label="Email" value={customer.email} mono />
-            <Row label="Account" value={customer.disabled ? "Disabled" : customer.emailVerified ? "Active" : "Email not verified"} />
-            <Row label="Joined" value={customer.createdAt ? new Date(customer.createdAt).toLocaleString() : "—"} />
-            <Row label="Last signed in" value={customer.lastSignInAt ? new Date(customer.lastSignInAt).toLocaleString() : "—"} />
-          </dl>
-
-          <div>
-            <p className="text-[13px] font-medium text-ink dark:text-ink-dark">Identity history</p>
-            {customer.cases.length === 0 ? (
-              <p className="mt-2 text-[12.5px] text-ink-faint">No verification submitted.</p>
-            ) : (
-              <ul className="mt-2 divide-y divide-line dark:divide-line-dark rounded-panel border border-line dark:border-line-dark">
-                {customer.cases.map((c) => (
-                  <li key={c.id} className="px-4 py-3">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <Badge tone={KYC_STATUS_TONE[c.kycStatus]}>{KYC_STATUS_LABEL[c.kycStatus] || c.kycStatus}</Badge>
-                      <span className="text-[12px] text-ink-faint">
-                        {KYC_METHOD_LABEL[c.method] || c.method} · v{c.version}
-                      </span>
-                    </div>
-                    {c.customerReason && (
-                      <p className="mt-1.5 text-[12.5px] text-ink dark:text-ink-dark">{c.customerReason}</p>
-                    )}
-                    <p className="mt-1 text-[11px] text-ink-faint">
-                      {c.submittedAt ? `Submitted ${new Date(c.submittedAt).toLocaleString()}` : "Not submitted"}
-                      {c.decidedAt ? ` · Decided ${new Date(c.decidedAt).toLocaleString()}` : ""}
-                      {c.reviewerName ? ` by ${c.reviewerName}` : ""}
-                    </p>
-                  </li>
-                ))}
-              </ul>
+        <div>
+          <Tabs tabs={TABS.map((t) => ({ ...t, value: `c-${t.value}` }))} value={`c-${tab}`} onChange={(value) => setTab(value.slice(2))} ariaLabel="Customer sections" />
+          <TabPanel value={`c-${tab}`}>
+            {tab === "overview" && (
+              <dl className="divide-y divide-line rounded-control border border-line">
+                <Row label="Name" value={customer.name || "Not given"} />
+                <Row label="Email" value={<span className="break-all">{customer.email}</span>} />
+                <Row
+                  label="Account"
+                  value={(() => {
+                    const pill = accountPill(customer);
+                    return <StatusPill tone={pill.tone}>{pill.label}</StatusPill>;
+                  })()}
+                />
+                <Row label="Joined" value={customer.createdAt ? formatDateTime(customer.createdAt) : "Not recorded"} />
+                <Row label="Last signed in" value={customer.lastSignInAt ? formatDateTime(customer.lastSignInAt) : "Not recorded"} />
+                <Row label="Identity cases" value={String(customer.cases.length)} />
+                <Row label="Payments" value={String(customer.payments.length)} />
+              </dl>
             )}
-          </div>
 
-          <div>
-            <p className="text-[13px] font-medium text-ink dark:text-ink-dark">Payments</p>
-            {customer.payments.length === 0 ? (
-              <p className="mt-2 text-[12.5px] text-ink-faint">No payments started.</p>
-            ) : (
-              <ul className="mt-2 divide-y divide-line dark:divide-line-dark rounded-panel border border-line dark:border-line-dark">
-                {customer.payments.slice(0, 15).map((p) => (
-                  <li key={p.id} className="flex items-center gap-3 px-4 py-2.5">
-                    <span className="min-w-0 flex-1 truncate font-mono text-[12px]">{p.reference}</span>
-                    <span className="shrink-0 text-[12px] text-ink-faint">{p.method}</span>
-                    <span className="shrink-0 font-mono text-[12.5px]">{birr(p.amountMinor)}</span>
-                    <Badge tone={PAYMENT_STATUS_TONE[p.status] || "neutral"}>{PAYMENT_STATUS_LABEL[p.status] || p.status}</Badge>
-                  </li>
-                ))}
-              </ul>
+            {tab === "kyc" &&
+              (customer.cases.length === 0 ? (
+                <p className="text-small text-ink-muted">No verification submitted.</p>
+              ) : (
+                <ul className="divide-y divide-line rounded-control border border-line">
+                  {customer.cases.map((c) => (
+                    <li key={c.id} className="px-4 py-3">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <StatusPill tone={KYC_STATUS_TONE[c.kycStatus]}>{KYC_STATUS_LABEL[c.kycStatus] || c.kycStatus}</StatusPill>
+                        <span className="text-caption text-ink-muted">
+                          {KYC_METHOD_LABEL[c.method] || c.method}, version {c.version}
+                        </span>
+                        <Link to={`/kyc/${c.id}`} className="ml-auto inline-flex min-h-11 items-center text-small font-medium text-link hover:underline">
+                          Open case
+                        </Link>
+                      </div>
+                      {c.customerReason && <p className="mt-1.5 text-small text-ink">{c.customerReason}</p>}
+                      <p className="mt-1 text-caption text-ink-muted">
+                        {c.submittedAt ? `Submitted ${formatDateTime(c.submittedAt)}` : "Not submitted"}
+                        {c.decidedAt ? `. Decided ${formatDateTime(c.decidedAt)}` : ""}
+                        {c.reviewerName ? ` by ${c.reviewerName}` : ""}
+                      </p>
+                    </li>
+                  ))}
+                </ul>
+              ))}
+
+            {tab === "payments" &&
+              (customer.payments.length === 0 ? (
+                <p className="text-small text-ink-muted">No payments started.</p>
+              ) : (
+                <>
+                  <ul className="divide-y divide-line rounded-control border border-line">
+                    {customer.payments.slice(0, 15).map((p) => (
+                      <li key={p.id} className="flex flex-wrap items-center gap-x-3 gap-y-1 px-4 py-2.5">
+                        <span className="min-w-0 flex-1 truncate text-small text-ink">
+                          {p.reference} <span className="text-ink-muted">({p.method})</span>
+                        </span>
+                        <span className="shrink-0 text-small font-medium tabular-nums text-ink">{formatMoney(p.amountMinor, p.currency || "ETB")}</span>
+                        <StatusPill tone={PAYMENT_STATUS_TONE[p.status] || "neutral"}>{PAYMENT_STATUS_LABEL[p.status] || p.status}</StatusPill>
+                      </li>
+                    ))}
+                  </ul>
+                  {customer.payments.length > 15 && <p className="mt-2 text-caption text-ink-muted">Showing the 15 most recent of {customer.payments.length}.</p>}
+                </>
+              ))}
+
+            {tab === "issuer" && <IssuerOnboarding uid={uid} />}
+            {tab === "cards" && (
+              <div className="flex flex-col gap-6">
+                <IssuerCardOrders uid={uid} />
+                <IssuerFunding uid={uid} />
+              </div>
             )}
-            {customer.payments.length > 15 && (
-              <p className="mt-2 text-[11px] text-ink-faint">
-                Showing the 15 most recent of {customer.payments.length}.
-              </p>
-            )}
-          </div>
-
-          <IssuerOnboarding uid={uid} />
-
-          <IssuerCardOrders uid={uid} />
-
-          <IssuerFunding uid={uid} />
-
-          <div className="flex justify-end">
-            <Button variant="secondary" icon={X} onClick={onClose}>
-              Close
-            </Button>
-          </div>
+          </TabPanel>
         </div>
       )}
-    </Dialog>
+    </Drawer>
   );
 }
 
 /**
  * The customer's onboarding with the card issuer. Deliberately its own
- * section, apart from "Identity history": Arifcard's review and the
- * issuer's verification are two different decisions, by two different
- * parties, and neither changes the other. Staff can read it and an
- * administrator can ask the issuer again — nobody can set it.
+ * section, apart from KYC: Arifcard's review and the issuer's verification
+ * are two different decisions, by two different parties, and neither
+ * changes the other. Staff can read it and an administrator can ask the
+ * issuer again — nobody can set it.
  */
 function IssuerOnboarding({ uid }) {
   const toast = useToast();
@@ -287,36 +304,37 @@ function IssuerOnboarding({ uid }) {
     try {
       const result = await adminService.refreshIssuerOnboarding(uid);
       setData({ onboarding: result.onboarding });
-      toast.success(result.refreshed ? "Checked with the card issuer." : `Not checked: ${result.reason || "unavailable"}.`);
+      if (result.refreshed) toast.success("Checked with the card issuer.");
+      else toast.info(`Not checked: ${result.reason || "the issuer is unavailable"}.`);
     } catch (problem) {
-      toast.error(problem?.message || "Could not check with the card issuer.");
+      toast.error(problem?.message || "We couldn't check with the card issuer. Try again.");
     } finally {
       setRefreshing(false);
     }
   };
 
   return (
-    <div>
+    <div className="flex flex-col gap-3">
       <div className="flex items-center justify-between gap-3">
-        <p className="text-[13px] font-medium text-ink dark:text-ink-dark">Card issuer onboarding</p>
+        <h3 className="text-h3 text-ink">Card issuer onboarding</h3>
         {o && (
           <Button variant="secondary" size="sm" icon={RefreshCw} loading={refreshing} onClick={refresh}>
             Check with issuer
           </Button>
         )}
       </div>
-      {loading && <Skeleton className="mt-2 h-[80px] w-full" />}
-      {!loading && error && <p className="mt-2 text-[12.5px] text-danger">{error.message}</p>}
+      {loading && <Skeleton className="h-24 w-full rounded-control" />}
+      {!loading && error && <ErrorState title="We couldn't load the issuer record" error={error} />}
       {!loading && o && (
-        <dl className="mt-2 rounded-panel border border-line dark:border-line-dark">
-          <Row label="State" value={<Badge tone={ISSUER_ONBOARDING_TONE[o.state]}>{ISSUER_ONBOARDING_LABEL[o.state] || o.state}</Badge>} />
-          <Row label="Application status" value={o.applicationStatus || "—"} mono />
-          {o.applicationReason && <Row label="Reason codes" value={o.applicationReason} mono />}
-          <Row label="Session" value={o.session ? `${o.session.status}${o.session.resumable ? "" : " (not resumable)"}` : "—"} mono />
-          <Row label="Our reference" value={o.externalUserId || "—"} mono />
-          <Row label="Issuer user id" value={o.providerUserId || "—"} mono />
-          <Row label="Last event" value={o.lastEventAt ? new Date(o.lastEventAt).toLocaleString() : "—"} />
-          <Row label="Last checked" value={o.lastRefreshedAt ? new Date(o.lastRefreshedAt).toLocaleString() : "—"} />
+        <dl className="divide-y divide-line rounded-control border border-line">
+          <Row label="State" value={<StatusPill tone={ISSUER_ONBOARDING_TONE[o.state]}>{ISSUER_ONBOARDING_LABEL[o.state] || o.state}</StatusPill>} />
+          <Row label="Application status" value={o.applicationStatus || "Not recorded"} />
+          {o.applicationReason && <Row label="Reason codes" value={o.applicationReason} />}
+          <Row label="Session" value={o.session ? `${o.session.status}${o.session.resumable ? "" : " (can't be resumed)"}` : "None"} />
+          <Row label="Our reference" value={o.externalUserId || "Not recorded"} />
+          <Row label="Issuer user ID" value={o.providerUserId || "Not recorded"} />
+          <Row label="Last event" value={o.lastEventAt ? formatDateTime(o.lastEventAt) : "None yet"} />
+          <Row label="Last checked" value={o.lastRefreshedAt ? formatDateTime(o.lastRefreshedAt) : "Never"} />
           {o.correlationProblem && <Row label="Correlation problem" value={o.correlationProblem} />}
           {o.gateBlocks?.length > 0 && <Row label="Blocked by" value={o.gateBlocks.map((b) => b.reason).join(" ")} />}
         </dl>
@@ -325,13 +343,11 @@ function IssuerOnboarding({ uid }) {
   );
 }
 
-function Row({ label, value, mono }) {
+function Row({ label, value }) {
   return (
-    <div className="flex items-center justify-between gap-4 border-b border-line dark:border-line-dark px-4 py-2.5 last:border-b-0">
-      <dt className="text-[13px] text-ink-muted dark:text-ink-muted-dark">{label}</dt>
-      <dd className={`text-right text-[13px] text-ink dark:text-ink-dark ${mono ? "font-mono text-[12px]" : ""}`}>
-        {value}
-      </dd>
+    <div className="grid grid-cols-[minmax(0,2fr)_minmax(0,3fr)] items-center gap-4 px-4 py-2.5">
+      <dt className="text-small text-ink-muted">{label}</dt>
+      <dd className="min-w-0 break-words text-right text-small text-ink">{value}</dd>
     </div>
   );
 }
