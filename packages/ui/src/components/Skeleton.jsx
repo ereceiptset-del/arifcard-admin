@@ -1,11 +1,10 @@
-/** Loading placeholder. Decorative, so hidden from assistive tech. */
+/**
+ * Loading placeholder. Decorative, so hidden from assistive tech — the
+ * region that is loading carries `aria-busy` instead. A gentle pulse, no
+ * shimmer; reduced motion stops it.
+ */
 export function Skeleton({ className = "" }) {
-  return (
-    <div
-      aria-hidden
-      className={`animate-pulse rounded-md bg-line dark:bg-line-dark ${className}`}
-    />
-  );
+  return <div aria-hidden className={`animate-pulse rounded-control bg-surface-2 ${className}`} />;
 }
 
 export function SkeletonText({ lines = 3 }) {

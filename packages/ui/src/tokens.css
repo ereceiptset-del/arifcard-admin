@@ -1,59 +1,225 @@
 /**
- * Arifcard shared design tokens.
+ * Arifcard design tokens (redesign v2). See docs/design-plan.md §1–§4.
  *
- * Imported by every app after `@import "tailwindcss"`. This is the only
- * stylesheet in the workspace that defines colour, radius, shadow and
- * layout values — components use Tailwind utilities that reference these.
+ * Every colour is a CSS variable defined twice — once for light, once for
+ * dark — and Tailwind reads the variable through `@theme inline`, so a
+ * utility such as `bg-surface-1` follows the theme without a `dark:` twin.
+ * The light set is also bound to `.light` and the dark set to `.dark`, so a
+ * subtree can be pinned to either theme (the design-system demo page shows
+ * every component in both side by side this way).
+ *
+ * New components use only the semantic tokens (surface, line, ink, accent,
+ * success, warning, danger, neutral, info). The older token names further
+ * down stay as aliases so screens not yet redesigned keep rendering; they
+ * are removed in Checkpoint D once nothing uses them.
  */
 
+:root,
+.light {
+  color-scheme: light;
+
+  --ac-surface-0: #f5f5f8;
+  --ac-surface-1: #ffffff;
+  --ac-surface-2: #eeeef3;
+  --ac-surface-3: #e5e5ec;
+  --ac-line: #e2e2ea;
+  --ac-line-strong: #8a8a98;
+  --ac-ink: #121218;
+  --ac-ink-soft: #45454f;
+  --ac-ink-muted: #62626e;
+
+  --ac-accent: #6b3ef0;
+  --ac-accent-hover: #5a2fd2;
+  --ac-accent-soft: #f4f0ff;
+  --ac-accent-ink: #6b3ef0;
+  --ac-on-accent: #ffffff;
+  --ac-link: #1e63c8;
+
+  --ac-success: #0b7a4b;
+  --ac-success-tint: #e6f5ec;
+  --ac-warning: #8f5300;
+  --ac-warning-tint: #fff3dc;
+  --ac-danger: #c0282b;
+  --ac-danger-tint: #fdecec;
+  --ac-neutral: #5a5a66;
+  --ac-neutral-tint: #eeeef3;
+  --ac-info: #1e63c8;
+  --ac-info-tint: #e8f0fc;
+
+  --ac-scrim: rgb(18 18 24 / 0.45);
+  --ac-shadow-e1: 0 1px 2px rgb(18 18 24 / 0.06), 0 6px 18px rgb(18 18 24 / 0.08);
+  --ac-shadow-e2: 0 24px 56px rgb(18 18 24 / 0.2);
+  --ac-shadow-e3: 0 22px 44px -16px rgb(60 34 131 / 0.55), 0 2px 6px rgb(18 18 24 / 0.12);
+}
+
+.dark {
+  color-scheme: dark;
+
+  --ac-surface-0: #0c0c11;
+  --ac-surface-1: #15151c;
+  --ac-surface-2: #1d1d26;
+  --ac-surface-3: #262631;
+  --ac-line: #2c2c38;
+  --ac-line-strong: #6e6e80;
+  --ac-ink: #f3f3f7;
+  --ac-ink-soft: #c6c6d0;
+  --ac-ink-muted: #9a9aa8;
+
+  --ac-accent: #9c7bff;
+  --ac-accent-hover: #baa1ff;
+  --ac-accent-soft: rgb(156 123 255 / 0.14);
+  --ac-accent-ink: #b39bff;
+  --ac-on-accent: #0c0c11;
+  --ac-link: #6faaff;
+
+  --ac-success: #4cd69a;
+  --ac-success-tint: #10261c;
+  --ac-warning: #f2b54a;
+  --ac-warning-tint: #2a2111;
+  --ac-danger: #ff7b7b;
+  --ac-danger-tint: #2c1416;
+  --ac-neutral: #a6a6b3;
+  --ac-neutral-tint: #1d1d26;
+  --ac-info: #6faaff;
+  --ac-info-tint: #131d2e;
+
+  --ac-scrim: rgb(0 0 0 / 0.6);
+  --ac-shadow-e1: 0 1px 2px rgb(0 0 0 / 0.4), 0 8px 24px rgb(0 0 0 / 0.35);
+  --ac-shadow-e2: 0 24px 64px rgb(0 0 0 / 0.6);
+  --ac-shadow-e3: 0 26px 50px -18px rgb(0 0 0 / 0.85), 0 0 0 1px rgb(255 255 255 / 0.04);
+}
+
+@theme inline {
+  /* Surfaces and text */
+  --color-surface-0: var(--ac-surface-0);
+  --color-surface-1: var(--ac-surface-1);
+  --color-surface-2: var(--ac-surface-2);
+  --color-surface-3: var(--ac-surface-3);
+  --color-line: var(--ac-line);
+  --color-line-strong: var(--ac-line-strong);
+  --color-ink: var(--ac-ink);
+  --color-ink-soft: var(--ac-ink-soft);
+  --color-ink-muted: var(--ac-ink-muted);
+
+  /* Accent and links */
+  --color-accent: var(--ac-accent);
+  --color-accent-hover: var(--ac-accent-hover);
+  --color-accent-soft: var(--ac-accent-soft);
+  --color-accent-ink: var(--ac-accent-ink);
+  --color-on-accent: var(--ac-on-accent);
+  --color-link: var(--ac-link);
+
+  /* Semantic — always paired with an icon and a word */
+  --color-success: var(--ac-success);
+  --color-success-tint: var(--ac-success-tint);
+  --color-warning: var(--ac-warning);
+  --color-warning-tint: var(--ac-warning-tint);
+  --color-danger: var(--ac-danger);
+  --color-danger-tint: var(--ac-danger-tint);
+  --color-neutral: var(--ac-neutral);
+  --color-neutral-tint: var(--ac-neutral-tint);
+  --color-info: var(--ac-info);
+  --color-info-tint: var(--ac-info-tint);
+  --color-scrim: var(--ac-scrim);
+
+  /* Elevation: three levels only (design-plan §3) */
+  --shadow-e1: var(--ac-shadow-e1);
+  --shadow-e2: var(--ac-shadow-e2);
+  --shadow-e3: var(--ac-shadow-e3);
+
+  /* Older names, kept as aliases until Checkpoint D */
+  --color-canvas: var(--ac-surface-0);
+  --color-panel: var(--ac-surface-1);
+  --color-panel-muted: var(--ac-surface-2);
+  --color-ink-faint: var(--ac-ink-muted);
+  --color-ok: var(--ac-success);
+  --color-warn: var(--ac-warning);
+  --color-brand: var(--ac-accent);
+  --color-brand-hover: var(--ac-accent-hover);
+  --color-brand-active: var(--ac-accent-hover);
+  --color-brand-muted: var(--ac-line-strong);
+  --color-brand-tint: var(--ac-accent-soft);
+  --shadow-panel: none;
+  --shadow-raised: var(--ac-shadow-e1);
+  --shadow-overlay: var(--ac-shadow-e2);
+}
+
 @theme {
-  /* Brand */
-  --color-brand: #8055ff;
-  --color-brand-hover: #7447f8;
-  --color-brand-active: #6c3fe0;
-  --color-brand-muted: #a98ff5;
-  --color-brand-tint: rgba(128, 85, 255, 0.1);
+  /* Violet scale around the existing brand colour (500). */
+  --color-violet-50: #f4f0ff;
+  --color-violet-100: #eae2ff;
+  --color-violet-200: #d6c7ff;
+  --color-violet-300: #baa1ff;
+  --color-violet-400: #9c7bff;
+  --color-violet-500: #8055ff;
+  --color-violet-600: #6b3ef0;
+  --color-violet-700: #5a2fd2;
+  --color-violet-800: #4a27a8;
+  --color-violet-900: #3c2283;
 
-  /* Light surfaces */
-  --color-canvas: #f8f9fb;
-  --color-panel: #ffffff;
-  --color-panel-muted: #fafafb;
-  --color-line: #e8eaee;
-  --color-line-strong: #d5dae1;
-  --color-ink: #101217;
-  --color-ink-soft: #4b5563;
-  --color-ink-muted: #687180;
-  --color-ink-faint: #8e96a4;
+  /* Fixed dark values for the older `dark:*-dark` utilities. */
+  --color-canvas-dark: #0c0c11;
+  --color-panel-dark: #15151c;
+  --color-panel-raised-dark: #15151c;
+  --color-line-dark: #2c2c38;
+  --color-line-strong-dark: #6e6e80;
+  --color-ink-dark: #f3f3f7;
+  --color-ink-muted-dark: #9a9aa8;
 
-  /* Dark surfaces */
-  --color-canvas-dark: #070b15;
-  --color-panel-dark: #0f141d;
-  --color-panel-raised-dark: #0b0f1a;
-  --color-line-dark: #232937;
-  --color-line-strong-dark: #303643;
-  --color-ink-dark: #f6f7f9;
-  --color-ink-muted-dark: #a6afbe;
+  /* Layout */
+  --spacing-rail: 248px;
+  --spacing-rail-collapsed: 76px;
+  --container-content: 1120px;
 
-  /* Status */
-  --color-ok: #059669;
-  --color-warn: #d97706;
-  --color-danger: #dc2626;
-  --color-info: #2563eb;
+  /* Radius encodes hierarchy: panel > control > tag. */
+  --radius-panel: 20px;
+  --radius-control: 10px;
+  --radius-field: 10px;
+  --radius-tag: 6px;
 
-  /* Layout. `--spacing-*` feeds w-/pl-; `--container-*` feeds max-w-. */
-  --spacing-rail: 240px;
-  --container-content: 960px;
+  /* Type scale (design-plan §2). Money is always the largest text. */
+  --font-sans: "Geist", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans Ethiopic", "Nyala", sans-serif;
+  --text-money: 2.5rem;
+  --text-money--line-height: 2.75rem;
+  --text-money--letter-spacing: -0.02em;
+  --text-money--font-weight: 600;
+  --text-money-sm: 2rem;
+  --text-money-sm--line-height: 2.25rem;
+  --text-money-sm--letter-spacing: -0.02em;
+  --text-money-sm--font-weight: 600;
+  --text-h1: 1.625rem;
+  --text-h1--line-height: 2rem;
+  --text-h1--letter-spacing: -0.015em;
+  --text-h1--font-weight: 600;
+  --text-h2: 1.1875rem;
+  --text-h2--line-height: 1.625rem;
+  --text-h2--letter-spacing: -0.01em;
+  --text-h2--font-weight: 600;
+  --text-h3: 1rem;
+  --text-h3--line-height: 1.375rem;
+  --text-h3--font-weight: 600;
+  --text-body: 0.9375rem;
+  --text-body--line-height: 1.5rem;
+  --text-small: 0.8125rem;
+  --text-small--line-height: 1.125rem;
+  --text-caption: 0.75rem;
+  --text-caption--line-height: 1rem;
+  --text-caption--letter-spacing: 0.005em;
 
-  /* Radii */
-  --radius-field: 8px;
-  --radius-panel: 12px;
+  /* Motion (design-plan §4) */
+  --ease-standard: cubic-bezier(0.2, 0, 0, 1);
+  --animate-card-in: card-in 480ms cubic-bezier(0.2, 0, 0, 1) both;
 
-  /* Restrained shadows */
-  --shadow-panel: 0 1px 2px rgba(16, 18, 23, 0.04);
-  --shadow-raised: 0 8px 24px rgba(16, 18, 23, 0.08);
-  --shadow-overlay: 0 16px 48px rgba(16, 18, 23, 0.18);
-
-  --font-sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  @keyframes card-in {
+    from {
+      opacity: 0;
+      transform: translateY(8px);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
 }
 
 html,
@@ -62,20 +228,6 @@ body,
   min-height: 100%;
   margin: 0;
   padding: 0;
-}
-
-/*
- * Base element styles only — no theme-dependent rules live here.
- *
- * Hand-written `.dark ...` selectors in this file proved unreliable once
- * Tailwind processed it, so theming is owned entirely by two mechanisms
- * that do work: `dark:` utilities on components (the shell sets
- * `bg-canvas dark:bg-canvas-dark`), and `color-scheme`, which
- * ThemeProvider sets inline on <html> to paint the native viewport
- * canvas, scrollbars and form controls.
- */
-html {
-  color-scheme: light;
 }
 
 body {
@@ -88,7 +240,7 @@ body {
 
 /* Visible keyboard focus everywhere; pointer users don't see it. */
 :focus-visible {
-  outline: 2px solid var(--color-brand);
+  outline: 2px solid var(--ac-accent);
   outline-offset: 2px;
 }
 

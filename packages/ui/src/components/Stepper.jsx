@@ -9,13 +9,13 @@ export function Stepper({ title, current, total }) {
   return (
     <div>
       <div className="flex items-baseline justify-between gap-4">
-        <h2 className="text-[15px] font-semibold text-ink dark:text-ink-dark">{title}</h2>
-        <p className="shrink-0 text-[12.5px] text-ink-muted dark:text-ink-muted-dark" aria-live="polite">
+        <h2 className="text-h3 text-ink">{title}</h2>
+        <p className="shrink-0 text-small text-ink-muted" aria-live="polite">
           Step {current} of {total}
         </p>
       </div>
       <div
-        className="mt-3 h-1 w-full overflow-hidden rounded-full bg-line dark:bg-line-dark"
+        className="mt-3 h-1 w-full overflow-hidden rounded-full bg-line"
         role="progressbar"
         aria-valuenow={current}
         aria-valuemin={1}
@@ -23,7 +23,7 @@ export function Stepper({ title, current, total }) {
         aria-label={`${title}, step ${current} of ${total}`}
       >
         <div
-          className="h-full rounded-full bg-brand transition-[width] duration-300"
+          className="h-full rounded-full bg-accent transition-[width] duration-300"
           style={{ width: `${percent}%` }}
         />
       </div>

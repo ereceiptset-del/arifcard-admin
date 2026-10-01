@@ -1,87 +1,44 @@
-import { useEffect, useRef } from "react";
+import { useId, useRef } from "react";
 import { X } from "lucide-react";
+import { useFocusTrap } from "../lib/useFocusTrap.js";
 
 /**
- * Modal dialog.
- *
- * Escape and backdrop click close it, body scroll is locked while open,
- * focus moves into the panel on open and returns to the trigger on close,
- * and Tab is trapped inside.
+ * Modal dialog: a bottom sheet on phones, centred from `sm` up.
+ * Escape and the backdrop close it; focus is trapped and restored.
  */
 export function Dialog({ open, onClose, title, description, footer, children, size = "md" }) {
   const panelRef = useRef(null);
-  const previouslyFocused = useRef(null);
-
-  useEffect(() => {
-    if (!open) return undefined;
-
-    previouslyFocused.current = document.activeElement;
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-
-    const onKeyDown = (event) => {
-      if (event.key === "Escape") {
-        onClose();
-        return;
-      }
-      if (event.key !== "Tab") return;
-
-      const focusables = panelRef.current?.querySelectorAll(
-        'a[href], button:not([disabled]), textarea, input, select, [tabindex]:not([tabindex="-1"])'
-      );
-      if (!focusables?.length) return;
-
-      const first = focusables[0];
-      const last = focusables[focusables.length - 1];
-      if (event.shiftKey && document.activeElement === first) {
-        event.preventDefault();
-        last.focus();
-      } else if (!event.shiftKey && document.activeElement === last) {
-        event.preventDefault();
-        first.focus();
-      }
-    };
-
-    document.addEventListener("keydown", onKeyDown);
-    const focusTimer = setTimeout(() => {
-      const target = panelRef.current?.querySelector(
-        'button:not([disabled]), input, select, textarea, a[href]'
-      );
-      (target || panelRef.current)?.focus();
-    }, 0);
-
-    return () => {
-      document.removeEventListener("keydown", onKeyDown);
-      document.body.style.overflow = previousOverflow;
-      clearTimeout(focusTimer);
-      previouslyFocused.current?.focus?.();
-    };
-  }, [open, onClose]);
+  const titleId = useId();
+  const descriptionId = useId();
+  useFocusTrap(open, onClose, panelRef);
 
   if (!open) return null;
 
-  const widths = { sm: "max-w-sm", md: "max-w-lg", lg: "max-w-2xl" };
+  const widths = { sm: "sm:max-w-sm", md: "sm:max-w-lg", lg: "sm:max-w-2xl" };
 
   return (
-    <div className="fixed inset-0 z-[90] flex items-end justify-center p-0 sm:items-center sm:p-4">
+    <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center sm:p-4">
       <div
-        className="absolute inset-0 bg-black/45 opacity-100 transition-opacity duration-200 starting:opacity-0"
-        onClick={onClose}
         aria-hidden
+        onClick={onClose}
+        className="absolute inset-0 bg-scrim opacity-100 transition-opacity duration-200 starting:opacity-0"
       />
       <div
         ref={panelRef}
         role="dialog"
         aria-modal="true"
-        aria-label={title}
+        aria-labelledby={titleId}
+        aria-describedby={description ? descriptionId : undefined}
         tabIndex={-1}
-        className={`relative w-full ${widths[size]} rounded-t-panel sm:rounded-panel border border-line dark:border-line-dark bg-panel dark:bg-panel-dark shadow-overlay opacity-100 translate-y-0 transition-[opacity,transform] duration-200 starting:opacity-0 starting:translate-y-3`}
+        className={`relative flex max-h-[92vh] w-full flex-col rounded-t-panel border border-line bg-surface-1 shadow-e2 sm:rounded-panel ${widths[size] || widths.md} translate-y-0 opacity-100 transition-[opacity,transform] duration-200 ease-[var(--ease-standard)] starting:translate-y-3 starting:opacity-0`}
       >
-        <header className="flex items-start justify-between gap-4 border-b border-line dark:border-line-dark px-5 py-4">
+        <header className="flex items-start justify-between gap-4 px-5 pt-5 sm:px-6">
           <div className="min-w-0">
-            <h2 className="text-[15px] font-semibold text-ink dark:text-ink-dark">{title}</h2>
+            <h2 id={titleId} className="text-h2 text-ink">
+              {title}
+            </h2>
             {description && (
-              <p className="mt-0.5 text-[13px] text-ink-muted dark:text-ink-muted-dark">
+              <p id={descriptionId} className="mt-1 text-small text-ink-muted">
                 {description}
               </p>
             )}
@@ -89,19 +46,17 @@ export function Dialog({ open, onClose, title, description, footer, children, si
           <button
             type="button"
             onClick={onClose}
-            aria-label="Close dialog"
-            className="shrink-0 rounded-field p-1 text-ink-faint hover:bg-panel-muted dark:hover:bg-white/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40"
+            aria-label="Close"
+            className="-mr-2 -mt-1 inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-control text-ink-muted hover:bg-surface-2 hover:text-ink"
           >
-            <X size={17} />
+            <X size={18} aria-hidden />
           </button>
         </header>
 
-        <div className="max-h-[70vh] overflow-y-auto px-5 py-5">{children}</div>
+        <div className="min-h-0 flex-1 overflow-y-auto px-5 py-5 sm:px-6">{children}</div>
 
         {footer && (
-          <footer className="flex flex-wrap justify-end gap-2 border-t border-line dark:border-line-dark px-5 py-4">
-            {footer}
-          </footer>
+          <footer className="flex flex-wrap justify-end gap-2 border-t border-line px-5 py-4 sm:px-6">{footer}</footer>
         )}
       </div>
     </div>

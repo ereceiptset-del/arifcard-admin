@@ -1,6 +1,8 @@
 import { lazy, Suspense } from "react";
 import { Routes, Route, Navigate, useLocation } from "react-router-dom";
-import { ThemeProvider as UiThemeProvider, ToastProvider } from "@addiscard/ui";
+// From the module, not the package index: this file is on the first-load
+// path, and the rest of the component library belongs to the lazy routes.
+import { ToastProvider } from "@addiscard/ui/components/Toast.jsx";
 import RequireStaff from "../components/auth/RequireStaff";
 
 // Sign-in screens (no sign-up: staff access is granted on the server only).
@@ -58,11 +60,9 @@ function AppRoutes() {
           path="/"
           element={
             <RequireStaff>
-              <UiThemeProvider>
-                <ToastProvider>
-                  <AdminLayout />
-                </ToastProvider>
-              </UiThemeProvider>
+              <ToastProvider>
+                <AdminLayout />
+              </ToastProvider>
             </RequireStaff>
           }
         >

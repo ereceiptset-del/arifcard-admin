@@ -1,4 +1,4 @@
-import VirtualCard from "../cards/VirtualCard";
+import { VirtualCard } from "@addiscard/ui";
 
 /**
  * AuthProductPanel
@@ -29,8 +29,8 @@ function AuthProductPanel({
         </div>
 
         {/* 2. Virtual Card */}
-        <div className="mt-11">
-          <VirtualCard />
+        <div className="mt-11 max-w-[360px]">
+          <VirtualCard state="showcase" />
         </div>
 
         {/* 3. Marketing Headline */}
@@ -45,7 +45,7 @@ function AuthProductPanel({
       </div>
 
       {/* 5. Bottom Small Product Text */}
-      <div className="pt-10 text-[11px] font-mono tracking-[0.18em] text-[#606877] uppercase">
+      <div className="pt-10 text-caption text-[#9a9aa8]">
         {bottomText}
       </div>
     </div>

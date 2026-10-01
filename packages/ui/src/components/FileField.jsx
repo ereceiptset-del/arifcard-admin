@@ -60,11 +60,11 @@ export function FileField({
   return (
     <div>
       {label && (
-        <span className="mb-1.5 block text-[13px] font-medium text-ink dark:text-ink-dark">
+        <span className="mb-1.5 block text-small font-medium text-ink">
           {label}
         </span>
       )}
-      {hint && <p className="mb-2 text-[12px] text-ink-faint">{hint}</p>}
+      {hint && <p className="mb-2 text-caption text-ink-muted">{hint}</p>}
 
       <input
         ref={inputRef}
@@ -77,7 +77,7 @@ export function FileField({
       />
 
       {value ? (
-        <div className="flex items-center gap-3 rounded-field border border-line-strong dark:border-line-strong-dark bg-panel-muted dark:bg-[#141823] p-3">
+        <div className="flex items-center gap-3 rounded-control border border-line-strong bg-surface-2 p-3">
           {previewUrl ? (
             <img
               src={previewUrl}
@@ -85,16 +85,16 @@ export function FileField({
               className="h-14 w-14 shrink-0 rounded-md object-cover"
             />
           ) : (
-            <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-md bg-brand/10 text-brand">
+            <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-md bg-accent-soft text-accent-ink">
               <FileImage size={20} />
             </span>
           )}
 
           <div className="min-w-0 flex-1">
-            <p className="truncate text-[13px] font-medium text-ink dark:text-ink-dark">
+            <p className="truncate text-small font-medium text-ink">
               {value.name}
             </p>
-            <p className="text-[12px] text-ink-faint">{formatBytes(value.size)} uploaded</p>
+            <p className="text-caption text-ink-muted">{formatBytes(value.size)} uploaded</p>
           </div>
 
           <div className="flex shrink-0 items-center gap-1">
@@ -102,7 +102,7 @@ export function FileField({
               type="button"
               onClick={() => inputRef.current?.click()}
               disabled={disabled || busy}
-              className="flex h-9 items-center gap-1.5 rounded-field px-2.5 text-[12.5px] font-medium text-ink-soft dark:text-ink-muted-dark hover:bg-panel dark:hover:bg-white/5 disabled:opacity-55 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40"
+              className="flex h-9 items-center gap-1.5 rounded-control px-2.5 text-small font-medium text-ink-soft hover:bg-surface-1 disabled:opacity-55 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
             >
               {busy ? <Spinner size={14} /> : <RefreshCw size={14} />}
               Replace
@@ -112,7 +112,7 @@ export function FileField({
               onClick={handleRemove}
               disabled={disabled || busy}
               aria-label={`Remove ${value.name}`}
-              className="flex h-9 w-9 items-center justify-center rounded-field text-ink-faint hover:bg-panel dark:hover:bg-white/5 hover:text-danger disabled:opacity-55 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40"
+              className="flex h-9 w-9 items-center justify-center rounded-control text-ink-muted hover:bg-surface-1 hover:text-danger disabled:opacity-55 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
             >
               <X size={15} />
             </button>
@@ -123,10 +123,10 @@ export function FileField({
           type="button"
           onClick={() => inputRef.current?.click()}
           disabled={disabled || busy}
-          className={`flex w-full items-center justify-center gap-2 rounded-field border border-dashed px-4 py-4 text-[13px] font-medium transition-colors disabled:opacity-55 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40 ${
+          className={`flex w-full items-center justify-center gap-2 rounded-control border border-dashed px-4 py-4 text-small font-medium transition-colors disabled:opacity-55 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 ${
             shownError
               ? "border-danger text-danger"
-              : "border-line-strong dark:border-line-strong-dark text-ink-soft dark:text-ink-muted-dark hover:border-brand hover:text-brand"
+              : "border-line-strong text-ink-soft hover:border-accent hover:text-accent-ink"
           }`}
         >
           {busy ? <Spinner size={15} /> : <Upload size={15} />}
@@ -135,7 +135,7 @@ export function FileField({
       )}
 
       {shownError && (
-        <p role="alert" className="mt-1.5 text-[12px] text-danger">
+        <p role="alert" className="mt-1.5 text-caption text-danger">
           {shownError}
         </p>
       )}

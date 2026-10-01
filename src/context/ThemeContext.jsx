@@ -1,44 +1,16 @@
-import { createContext, useContext, useEffect, useState } from "react";
+// Imported from the module, not the package index, so the first-load bundle
+// carries the theme provider only — not the whole component library.
+import { ThemeProvider as UiThemeProvider, useTheme as useUiTheme } from "@addiscard/ui/theme/ThemeProvider.jsx";
 
-const STORAGE_KEY = "addiscard-theme";
-const ThemeContext = createContext(null);
-
-function getSystemPrefersDark() {
-  return window.matchMedia("(prefers-color-scheme: dark)").matches;
-}
-
-function applyResolvedTheme(theme) {
-  const isDark = theme === "dark" || (theme === "system" && getSystemPrefersDark());
-  document.documentElement.classList.toggle("dark", isDark);
-  return isDark ? "dark" : "light";
-}
-
-export function ThemeProvider({ children }) {
-  const [theme, setThemeState] = useState(() => localStorage.getItem(STORAGE_KEY) || "system");
-  const [resolvedTheme, setResolvedTheme] = useState(() => applyResolvedTheme(theme));
-
-  useEffect(() => {
-    setResolvedTheme(applyResolvedTheme(theme));
-    localStorage.setItem(STORAGE_KEY, theme);
-  }, [theme]);
-
-  useEffect(() => {
-    if (theme !== "system") return;
-    const mql = window.matchMedia("(prefers-color-scheme: dark)");
-    const handleChange = () => setResolvedTheme(applyResolvedTheme("system"));
-    mql.addEventListener("change", handleChange);
-    return () => mql.removeEventListener("change", handleChange);
-  }, [theme]);
-
-  return (
-    <ThemeContext.Provider value={{ theme, resolvedTheme, setTheme: setThemeState }}>
-      {children}
-    </ThemeContext.Provider>
-  );
-}
+/**
+ * The site's theme is the design system's theme: one provider, one
+ * storage key (`addiscard-theme`), applied before first paint by
+ * `public/theme-init.js`. This module keeps the older `{ theme, setTheme }`
+ * names for the marketing and sign-in components that use them.
+ */
+export const ThemeProvider = UiThemeProvider;
 
 export function useTheme() {
-  const ctx = useContext(ThemeContext);
-  if (!ctx) throw new Error("useTheme must be used within a ThemeProvider");
-  return ctx;
+  const { preference, resolvedTheme, setPreference } = useUiTheme();
+  return { theme: preference, resolvedTheme, setTheme: setPreference };
 }

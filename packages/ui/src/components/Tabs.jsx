@@ -4,7 +4,7 @@
  */
 export function Tabs({ tabs, value, onChange, ariaLabel = "Sections" }) {
   return (
-    <div className="border-b border-line dark:border-line-dark">
+    <div className="border-b border-line">
       <div className="flex gap-1 overflow-x-auto" role="tablist" aria-label={ariaLabel}>
         {tabs.map((tab) => {
           const active = tab.value === value;
@@ -17,10 +17,10 @@ export function Tabs({ tabs, value, onChange, ariaLabel = "Sections" }) {
               aria-selected={active}
               aria-controls={`panel-${tab.value}`}
               onClick={() => onChange(tab.value)}
-              className={`shrink-0 border-b-2 px-3 pb-2.5 pt-1 text-[13.5px] font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40 ${
+              className={`inline-flex min-h-11 shrink-0 items-center border-b-2 px-3 text-small font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 ${
                 active
-                  ? "border-ink dark:border-ink-dark text-ink dark:text-ink-dark"
-                  : "border-transparent text-ink-muted dark:text-ink-muted-dark hover:text-ink dark:hover:text-ink-dark"
+                  ? "border-ink text-ink"
+                  : "border-transparent text-ink-muted hover:text-ink"
               }`}
             >
               {tab.label}

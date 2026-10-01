@@ -1,10 +1,22 @@
 import { useCallback, useState } from "react";
 import { Link } from "react-router-dom";
-import { AlertTriangle, Clock, Inbox } from "lucide-react";
-import { Panel, Badge, ErrorState, EmptyState, Skeleton, TextInput } from "@addiscard/ui";
-import { adminService, KYC_STATUS_LABEL, KYC_STATUS_TONE, birr } from "@addiscard/services";
+import { TriangleAlert, Clock, Users, Banknote, Mail } from "lucide-react";
+import {
+  Panel,
+  PageHeader,
+  StatCard,
+  StatusPill,
+  ErrorState,
+  EmptyState,
+  Skeleton,
+  TextInput,
+  BarChart,
+  formatMoney,
+  formatDate,
+  formatDateTime,
+} from "@addiscard/ui";
+import { adminService } from "@addiscard/services";
 import { useAsync } from "../../hooks/useAsync.js";
-import { Metric, BarChart } from "../../components/admin/Metric.jsx";
 
 /**
  * The operational dashboard.
@@ -22,10 +34,13 @@ import { Metric, BarChart } from "../../components/admin/Metric.jsx";
  * question.
  *
  * **Counted zero versus could not count.** A metric the backend could not
- * compute renders as "unavailable" with the reason, never as 0. Fees,
+ * compute renders as "Unavailable" with the reason, never as 0. Fees,
  * principal and refunds fall in that category: they need a ledger that
  * does not exist, and reporting them as zero would assert that no fees
  * were charged and no refunds are owed.
+ *
+ * Every figure the previous version showed is still here, with the same
+ * value (analytics parity, docs/checkpoint-c.md).
  */
 
 const PERIODS = [
@@ -47,6 +62,11 @@ const minutesToText = (n) => {
   return `${Math.round((n / 1440) * 10) / 10} d`;
 };
 
+const etb = (minor) => formatMoney(minor, "ETB");
+const count = (n) => Number(n || 0).toLocaleString("en-US");
+/** `{ available, value }` from the backend, or a bare number known to be counted. */
+const known = (value) => ({ available: true, value });
+
 export default function OverviewPage() {
   const [period, setPeriod] = useState("7d");
   const [provider, setProvider] = useState("all");
@@ -67,47 +87,74 @@ export default function OverviewPage() {
   const ops = data?.operations;
   const waiting = (kyc?.queue.pending || 0) + (kyc?.queue.underReview || 0);
 
+  const attention = data
+    ? [
+        waiting > 0 && {
+          key: "kyc",
+          icon: Users,
+          to: "/kyc?status=PENDING",
+          text: `${waiting} identity ${waiting === 1 ? "case is" : "cases are"} waiting`,
+          detail: kyc.oldestWaiting ? `Oldest since ${formatDateTime(kyc.oldestWaiting.submittedAt)}` : null,
+        },
+        (payments.needsReview.value || 0) > 0 && {
+          key: "payments",
+          icon: Banknote,
+          to: "/payments?status=REQUIRES_REVIEW",
+          text: `${payments.needsReview.value} ${payments.needsReview.value === 1 ? "payment needs" : "payments need"} a person`,
+        },
+        (ops.failedNotifications.value || 0) > 0 && {
+          key: "mail",
+          icon: Mail,
+          to: "/notifications",
+          text: `${ops.failedNotifications.value} ${ops.failedNotifications.value === 1 ? "email" : "emails"} failed to send`,
+        },
+      ].filter(Boolean)
+    : [];
+
+  const series = (byDay, pick = (v) => v) =>
+    Object.keys(byDay || {})
+      .sort()
+      .map((day) => ({ label: day.slice(5), value: pick(byDay[day]) }));
+
   return (
-    <>
-      <div className="flex flex-wrap items-baseline justify-between gap-3">
-        <div>
-          <h1 className="text-[22px] font-semibold tracking-tight text-ink dark:text-ink-dark">Overview</h1>
-          <p className="mt-1 text-[13.5px] text-ink-muted dark:text-ink-muted-dark">
-            Counted from the records themselves, each time this page loads.
-          </p>
-        </div>
-        {data && (
-          <p className="text-[12px] text-ink-faint">
-            Last updated {new Date(data.generatedAt).toLocaleTimeString()} ·{" "}
-            <span title={`${data.window.startUtc} to ${data.window.endUtc} UTC`}>
-              {data.window.timezone.replace("_", " ")}
+    <div className="flex flex-col gap-6">
+      <PageHeader
+        title="Overview"
+        description="Counted from the records themselves, each time this page loads."
+        meta={
+          data && (
+            <span className="text-caption text-ink-muted" title={`${data.window.startUtc} to ${data.window.endUtc} UTC`}>
+              Updated {formatDateTime(data.generatedAt)}, {data.window.timezone.replace("_", " ")} time
             </span>
-          </p>
-        )}
-      </div>
+          )
+        }
+      />
 
       {/* Filters */}
-      <div className="mt-5 flex flex-wrap items-end gap-2">
-        {PERIODS.map((p) => (
-          <button
-            key={p.value}
-            type="button"
-            onClick={() => setPeriod(p.value)}
-            className={`rounded-full border px-3 py-1.5 text-[12.5px] ${
-              period === p.value
-                ? "border-brand bg-brand/10 text-brand"
-                : "border-line dark:border-line-dark text-ink-muted dark:text-ink-muted-dark"
-            }`}
-          >
-            {p.label}
-          </button>
-        ))}
-
+      <div className="flex flex-wrap items-end gap-2">
+        <div role="group" aria-label="Period" className="flex flex-wrap gap-2">
+          {PERIODS.map((p) => (
+            <button
+              key={p.value}
+              type="button"
+              aria-pressed={period === p.value}
+              onClick={() => setPeriod(p.value)}
+              className={`min-h-11 rounded-full border px-4 text-small font-medium ${
+                period === p.value ? "border-accent bg-accent-soft text-accent-ink" : "border-line-strong bg-surface-1 text-ink-soft hover:bg-surface-2"
+              }`}
+            >
+              {p.label}
+            </button>
+          ))}
+        </div>
+        <label className="sr-only" htmlFor="overview-provider">
+          Payment provider
+        </label>
         <select
+          id="overview-provider"
           value={provider}
           onChange={(event) => setProvider(event.target.value)}
-          aria-label="Payment provider"
-          className="h-8 rounded-field border border-line dark:border-line-dark bg-panel dark:bg-panel-dark px-2 text-[12.5px] text-ink dark:text-ink-dark"
+          className="h-11 rounded-control border border-line-strong bg-surface-1 px-3 text-small text-ink"
         >
           {PROVIDERS.map((p) => (
             <option key={p.value} value={p.value}>
@@ -115,206 +162,242 @@ export default function OverviewPage() {
             </option>
           ))}
         </select>
-
         {period === "custom" && (
-          <div className="flex items-end gap-2">
+          <div className="flex flex-wrap items-end gap-2">
             <TextInput label="From" type="date" value={from} onChange={(e) => setFrom(e.target.value)} />
             <TextInput label="To" type="date" value={to} onChange={(e) => setTo(e.target.value)} />
           </div>
         )}
       </div>
 
-      {period === "custom" && !ready && (
-        <p className="mt-4 text-[13px] text-ink-muted dark:text-ink-muted-dark">
-          Choose both dates to see the report.
-        </p>
-      )}
+      {period === "custom" && !ready && <p className="text-small text-ink-muted">Choose both dates to see the report.</p>}
 
       {loading && ready && (
-        <div className="mt-6 flex flex-col gap-5">
-          <Skeleton className="h-[110px] w-full" />
-          <Skeleton className="h-[220px] w-full" />
+        <div aria-busy="true" className="flex flex-col gap-4">
+          <Skeleton className="h-28 w-full rounded-panel" />
+          <Skeleton className="h-64 w-full rounded-panel" />
         </div>
       )}
 
-      {!loading && error && (
-        <div className="mt-6">
-          <ErrorState title="Could not load the dashboard" message={error.message} onRetry={reload} />
-        </div>
-      )}
+      {!loading && error && <ErrorState title="We couldn't load the overview" error={error} onRetry={reload} />}
 
       {!loading && !error && data && (
         <>
-          {/* Needs attention — shown only when there is something to act on. */}
-          {(waiting > 0 || (ops?.failedNotifications.value || 0) > 0 || (payments?.needsReview.value || 0) > 0) && (
-            <div className="mt-6 rounded-panel border border-warn/30 bg-warn/5 px-4 py-3">
-              <p className="flex items-center gap-2 text-[13px] font-semibold text-ink dark:text-ink-dark">
-                <AlertTriangle size={15} className="text-warn" aria-hidden="true" />
+          {/* Needs attention — first, and only when there is something to act on. */}
+          {attention.length > 0 && (
+            <section aria-labelledby="attention-title" className="rounded-panel border border-line bg-warning-tint px-4 py-4 sm:px-6">
+              <h2 id="attention-title" className="flex items-center gap-2 text-h3 text-ink">
+                <TriangleAlert size={18} aria-hidden className="text-warning" />
                 Needs attention
-              </p>
-              <ul className="mt-2 flex flex-col gap-1 text-[13px] text-ink dark:text-ink-dark">
-                {waiting > 0 && (
-                  <li>
-                    <Link to="/kyc?status=PENDING" className="text-brand hover:underline">
-                      {waiting} identity {waiting === 1 ? "case is" : "cases are"} waiting
-                    </Link>
-                    {kyc?.oldestWaiting && (
-                      <span className="text-ink-faint">
-                        {" "}
-                        — oldest since {new Date(kyc.oldestWaiting.submittedAt).toLocaleDateString()}
-                      </span>
-                    )}
-                  </li>
-                )}
-                {(payments?.needsReview.value || 0) > 0 && (
-                  <li>
-                    <Link to="/payments?status=REQUIRES_REVIEW" className="text-brand hover:underline">
-                      {payments.needsReview.value} payment(s) need a person
-                    </Link>
-                  </li>
-                )}
-                {(ops?.failedNotifications.value || 0) > 0 && (
-                  <li>
-                    <Link to="/notifications" className="text-brand hover:underline">
-                      {ops.failedNotifications.value} email(s) failed to send
-                    </Link>
-                  </li>
-                )}
+              </h2>
+              <ul className="mt-3 grid gap-2 md:grid-cols-3">
+                {attention.map((item) => {
+                  const Icon = item.icon;
+                  return (
+                    <li key={item.key}>
+                      <Link to={item.to} className="flex min-h-11 items-start gap-3 rounded-control bg-surface-1 px-3 py-2.5 hover:bg-surface-2">
+                        <Icon size={17} aria-hidden className="mt-0.5 shrink-0 text-warning" />
+                        <span className="min-w-0">
+                          <span className="block text-small font-semibold text-ink">{item.text}</span>
+                          {item.detail && <span className="block text-caption text-ink-muted">{item.detail}</span>}
+                        </span>
+                      </Link>
+                    </li>
+                  );
+                })}
               </ul>
-            </div>
+            </section>
           )}
 
-          {/* Queue — a snapshot of now, not of the period. */}
-          <h2 className="mt-6 text-[14px] font-semibold text-ink dark:text-ink-dark">
-            Identity queue <span className="font-normal text-ink-faint">— right now</span>
-          </h2>
-          <div className="mt-3 grid grid-cols-2 gap-4 lg:grid-cols-5">
-            <Metric label="Waiting" metric={{ available: true, value: kyc.queue.pending }} to="/kyc?status=PENDING" tone={kyc.queue.pending > 0 ? "warn" : "neutral"} />
-            <Metric label="Being reviewed" metric={{ available: true, value: kyc.queue.underReview }} to="/kyc?status=UNDER_REVIEW" />
-            <Metric label="Changes requested" metric={{ available: true, value: kyc.queue.changesRequested }} to="/kyc?status=CHANGES_REQUESTED" />
-            <Metric label="Approved" metric={{ available: true, value: kyc.queue.approved }} to="/kyc?status=APPROVED" />
-            <Metric label="Rejected" metric={{ available: true, value: kyc.queue.rejected }} to="/kyc?status=REJECTED" />
-          </div>
-
-          {/* Period activity */}
-          <h2 className="mt-7 text-[14px] font-semibold text-ink dark:text-ink-dark">
-            In this period{" "}
-            <span className="font-normal text-ink-faint">
-              — {new Date(data.window.startUtc).toLocaleDateString()} to{" "}
-              {new Date(new Date(data.window.endUtc).getTime() - 1).toLocaleDateString()}
-            </span>
-          </h2>
-          <div className="mt-3 grid grid-cols-2 gap-4 lg:grid-cols-4">
-            <Metric label="New customers" metric={customers.newInPeriod} to="/customers" />
-            <Metric label="Decisions made" metric={kyc.decidedInPeriod} />
-            <Metric
-              label="Approval rate"
-              metric={kyc.approvalRate}
-              format={(n) => `${n}%`}
-              hint="approved ÷ (approved + rejected)"
+          {/* Primary figures: one joined strip, not a wall of identical tiles. */}
+          <section aria-label="Key figures" className="grid grid-cols-2 gap-px overflow-hidden rounded-panel border border-line bg-line md:grid-cols-3 xl:grid-cols-6">
+            <StatCard className="bg-surface-1" label="Customers" available={customers.total?.available !== false} value={count(customers.total?.value)} reason={customers.total?.reason} hint="All time" />
+            <StatCard className="bg-surface-1" label="New customers" available={customers.newInPeriod.available !== false} value={count(customers.newInPeriod.value)} reason={customers.newInPeriod.reason} hint="This period" href="/customers" LinkComponent={Link} />
+            <StatCard className="bg-surface-1" label="KYC waiting" value={count(waiting)} hint="Waiting or being reviewed now" tone={waiting > 0 ? "attention" : "default"} href="/kyc?status=PENDING" LinkComponent={Link} />
+            <StatCard className="bg-surface-1" label="Verified payments" available={payments.verifiedCount.available !== false} value={count(payments.verifiedCount.value)} reason={payments.verifiedCount.reason} hint="This period" href="/payments?status=VERIFIED" LinkComponent={Link} />
+            <StatCard className="bg-surface-1" label="Verified volume" available={payments.verifiedMinor.available !== false} value={etb(payments.verifiedMinor.value)} reason={payments.verifiedMinor.reason} hint="This period" />
+            <StatCard
+              className="bg-surface-1"
+              label="Payments needing a person"
+              available={payments.needsReview.available !== false}
+              value={count(payments.needsReview.value)}
+              reason={payments.needsReview.reason}
+              hint="Right now"
+              tone={payments.needsReview.value > 0 ? "attention" : "default"}
+              href="/payments?status=REQUIRES_REVIEW"
+              LinkComponent={Link}
             />
-            <Metric label="Median review time" metric={kyc.medianReviewMinutes} format={minutesToText} />
+          </section>
+
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+            <MetricList
+              title="Identity queue"
+              note="Right now"
+              rows={[
+                ["Waiting", known(kyc.queue.pending), count, "/kyc?status=PENDING"],
+                ["Being reviewed", known(kyc.queue.underReview), count, "/kyc?status=UNDER_REVIEW"],
+                ["Changes requested", known(kyc.queue.changesRequested), count, "/kyc?status=CHANGES_REQUESTED"],
+                ["Approved", known(kyc.queue.approved), count, "/kyc?status=APPROVED"],
+                ["Rejected", known(kyc.queue.rejected), count, "/kyc?status=REJECTED"],
+              ]}
+            />
+            <MetricList
+              title="Identity decisions"
+              note={`${formatDate(data.window.startUtc)} to ${formatDate(new Date(new Date(data.window.endUtc).getTime() - 1))}`}
+              rows={[
+                ["Decisions made", kyc.decidedInPeriod, count],
+                ["Approved", kyc.approvedInPeriod, count],
+                ["Rejected", kyc.rejectedInPeriod, count],
+                ["Approval rate", kyc.approvalRate, (n) => `${n}%`, null, "Approved ÷ (approved + rejected)"],
+                ["Median review time", kyc.medianReviewMinutes, minutesToText],
+              ]}
+            />
+            <MetricList
+              title="Verified payments"
+              note="This period"
+              rows={[
+                ["Payments", payments.verifiedCount, count, "/payments?status=VERIFIED", "Counted per payment, not per receipt"],
+                ["Amount", payments.verifiedMinor, etb],
+                ["CBE", known(payments.byProvider.CBE.count), (n) => `${count(n)} (${etb(payments.byProvider.CBE.minor)})`],
+                ["Telebirr", known(payments.byProvider.TELEBIRR.count), (n) => `${count(n)} (${etb(payments.byProvider.TELEBIRR.minor)})`],
+              ]}
+            />
+            <MetricList
+              title="Receipts needing a person"
+              note="Right now"
+              rows={[
+                ["Needs a person", payments.needsReview, count, "/payments?status=REQUIRES_REVIEW"],
+                ["Still checking", payments.verifying, count],
+                ["Already-allocated transactions", payments.duplicateRejected, count, null, "A transaction presented again; never credited twice"],
+                ["Provider unreachable", payments.providerFailures, count, null, "Ours to retry, not the customer's fault"],
+              ]}
+            />
+            <MetricList
+              title="Money"
+              note="Birr received is customers' money awaiting a card. It is not revenue, and nothing here adds ETB to USD."
+              rows={[
+                ["Received (verified)", payments.verifiedMinor, etb],
+                ["Customer principal", payments.principalMinor, etb],
+                ["Service fees", payments.feesMinor, etb],
+                ["Refunds", payments.refundsMinor, etb],
+              ]}
+            />
+            <MetricList
+              title="Cards"
+              note="From the card issuer"
+              rows={[
+                ["Active cards", data.cards, count],
+                ["Pending card orders", data.cards, count],
+                ["Failed emails", ops.failedNotifications, count, "/notifications"],
+                ["Queued emails", ops.pendingNotifications, count, "/notifications"],
+              ]}
+            />
           </div>
 
-          <div className="mt-4 grid grid-cols-2 gap-4 lg:grid-cols-4">
-            <Metric label="Verified payments" metric={payments.verifiedCount} to="/payments?status=VERIFIED" hint="counted per payment, not per receipt" />
-            <Metric label="Verified amount" metric={payments.verifiedMinor} format={(n) => birr(n)} />
-            <Metric label="CBE" metric={{ available: true, value: payments.byProvider.CBE.count }} />
-            <Metric label="Telebirr" metric={{ available: true, value: payments.byProvider.TELEBIRR.count }} />
-          </div>
+          <section aria-label="Charts" className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+            <ChartPanel empty="No new customers in this period" data={series(customers.registrationsByDay)}>
+              {(rows) => <BarChart title="Registrations per day" data={rows} />}
+            </ChartPanel>
+            <ChartPanel empty="No decisions in this period" data={series(kyc.decisionsByDay, (d) => d.approved + d.rejected + d.changesRequested)}>
+              {(rows) => <BarChart title="KYC decisions per day" data={rows} />}
+            </ChartPanel>
+            <ChartPanel empty="No verified payments in this period" data={series(payments.volumeByDay, (v) => v.minor)}>
+              {(rows) => <BarChart title="Verified volume per day (ETB)" data={rows} valueFormat={etb} />}
+            </ChartPanel>
+          </section>
 
-          <h2 className="mt-7 text-[14px] font-semibold text-ink dark:text-ink-dark">
-            Receipts needing a person <span className="font-normal text-ink-faint">— right now</span>
-          </h2>
-          <div className="mt-3 grid grid-cols-2 gap-4 lg:grid-cols-4">
-            <Metric label="Needs a person" metric={payments.needsReview} to="/payments?status=REQUIRES_REVIEW" tone={payments.needsReview.value > 0 ? "warn" : "neutral"} />
-            <Metric label="Still checking" metric={payments.verifying} />
-            <Metric label="Already-allocated transactions" metric={payments.duplicateRejected} hint="a transaction presented again — never credited twice" />
-            <Metric label="Provider unreachable" metric={payments.providerFailures} hint="ours to retry, not the customer's fault" />
-          </div>
+          <Panel title="Payment providers" description="Verified payments this period, by provider.">
+            <ProviderSplit byProvider={payments.byProvider} />
+          </Panel>
 
-          {/* Money that would need a ledger. */}
-          <h2 className="mt-7 text-[14px] font-semibold text-ink dark:text-ink-dark">Money</h2>
-          <p className="mt-1 text-[12.5px] text-ink-faint">
-            Birr received is customers' money awaiting a card. It is not revenue, and nothing here adds ETB to
-            USD.
-          </p>
-          <div className="mt-3 grid grid-cols-2 gap-4 lg:grid-cols-4">
-            <Metric label="Received (verified)" metric={payments.verifiedMinor} format={(n) => birr(n)} />
-            <Metric label="Customer principal" metric={payments.principalMinor} />
-            <Metric label="Service fees" metric={payments.feesMinor} />
-            <Metric label="Refunds" metric={payments.refundsMinor} />
-          </div>
-
-          {/* Charts */}
-          <div className="mt-7 grid gap-5 lg:grid-cols-3">
-            <Panel>
-              <BarChart title="Registrations" series={customers.registrationsByDay} empty="No new customers in this period" />
-            </Panel>
-            <Panel>
-              <BarChart
-                title="KYC decisions"
-                series={Object.fromEntries(
-                  Object.entries(kyc.decisionsByDay).map(([day, d]) => [
-                    day,
-                    d.approved + d.rejected + d.changesRequested,
-                  ])
-                )}
-                empty="No decisions in this period"
-              />
-            </Panel>
-            <Panel>
-              <BarChart
-                title="Verified payment volume"
-                series={Object.fromEntries(Object.entries(payments.volumeByDay).map(([day, v]) => [day, v.minor]))}
-                format={(n) => birr(n).replace(" ETB", "")}
-                empty="No verified payments in this period"
-              />
-            </Panel>
-          </div>
-
-          {/* Cards — absent, and said so. */}
-          <div className="mt-5">
-            <Panel padded={false}>
-              <EmptyState
-                icon={Inbox}
-                title={data.cards.reason}
-                description="Card orders, issuance and reconciliation figures will appear here once a provider is connected. They are not shown as zero, because zero would read as nothing needing attention."
-                dashed
-              />
-            </Panel>
-          </div>
-
-          {/* Recent admin activity */}
-          <div className="mt-5">
-            <Panel title="Recent activity" description="From the audit trail." padded={false}>
-              {ops.recentActivity.length === 0 ? (
-                <EmptyState icon={Clock} title="Nothing recorded yet" description="Sensitive actions appear here as they happen." />
-              ) : (
-                <ul className="divide-y divide-line dark:divide-line-dark">
-                  {ops.recentActivity.map((entry) => (
-                    <li key={entry.id} className="flex items-center gap-3 px-5 py-3">
-                      <Badge tone="neutral">{entry.action}</Badge>
-                      <span className="min-w-0 flex-1 truncate text-[13px] text-ink dark:text-ink-dark">
-                        {entry.actorName || "—"}
-                      </span>
-                      <span className="shrink-0 text-[12px] text-ink-faint">
-                        {entry.createdAt ? new Date(entry.createdAt).toLocaleString() : "—"}
-                      </span>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </Panel>
-          </div>
+          <Panel title="Recent activity" description="From the audit trail." padded={false} action={<Link to="/audit" className="inline-flex min-h-11 items-center text-small font-medium text-link hover:underline">Open audit log</Link>}>
+            {ops.recentActivity.length === 0 ? (
+              <EmptyState compact icon={Clock} title="Nothing recorded yet" description="Sensitive actions appear here as they happen." />
+            ) : (
+              <ul className="divide-y divide-line">
+                {ops.recentActivity.map((entry) => (
+                  <li key={entry.id} className="flex flex-wrap items-center gap-x-3 gap-y-1 px-4 py-3 sm:px-6">
+                    <StatusPill tone="neutral" icon={null}>
+                      {entry.action}
+                    </StatusPill>
+                    <span className="min-w-0 flex-1 truncate text-small text-ink">{entry.actorName || "System"}</span>
+                    <span className="shrink-0 text-caption text-ink-muted">{entry.createdAt ? formatDateTime(entry.createdAt) : "Time not recorded"}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </Panel>
 
           {(customers.truncated || kyc.truncated || payments.truncated) && (
-            <p className="mt-5 text-[12px] text-warn">
+            <p role="note" className="rounded-control bg-warning-tint px-4 py-3 text-small text-ink">
               More records exist than this report counts. The totals above are a floor, not a total.
             </p>
           )}
         </>
       )}
-    </>
+    </div>
+  );
+}
+
+/** A titled list of metrics: label left, figure right, "Unavailable" with its reason when not counted. */
+function MetricList({ title, note, rows }) {
+  return (
+    <Panel title={title} description={note}>
+      <dl className="divide-y divide-line">
+        {rows.map(([label, metric, format, to, hint]) => {
+          const available = metric?.available !== false;
+          const value = available ? format(metric?.value ?? 0) : "Unavailable";
+          return (
+            <div key={label} className="flex items-start justify-between gap-4 py-2.5 first:pt-0 last:pb-0">
+              <dt className="min-w-0 text-small text-ink-soft">
+                {to && available ? (
+                  <Link to={to} className="text-link hover:underline">
+                    {label}
+                  </Link>
+                ) : (
+                  label
+                )}
+                {hint && available && <span className="block text-caption text-ink-muted">{hint}</span>}
+                {!available && metric?.reason && <span className="block text-caption text-ink-muted">{metric.reason}</span>}
+              </dt>
+              <dd className={`shrink-0 text-right text-small tabular-nums ${available ? "font-semibold text-ink" : "text-ink-muted"}`}>{value}</dd>
+            </div>
+          );
+        })}
+      </dl>
+    </Panel>
+  );
+}
+
+function ChartPanel({ data, empty, children }) {
+  return <Panel>{data.length === 0 ? <p className="text-small text-ink-muted">{empty}</p> : children(data)}</Panel>;
+}
+
+function ProviderSplit({ byProvider }) {
+  const rows = [
+    ["CBE", byProvider.CBE],
+    ["Telebirr", byProvider.TELEBIRR],
+  ];
+  const total = rows.reduce((sum, [, v]) => sum + (v.count || 0), 0);
+  if (total === 0) return <p className="text-small text-ink-muted">No verified payments in this period.</p>;
+  return (
+    <ul className="flex flex-col gap-3">
+      {rows.map(([name, v]) => {
+        const share = Math.round(((v.count || 0) / total) * 100);
+        return (
+          <li key={name}>
+            <div className="flex items-baseline justify-between gap-3 text-small">
+              <span className="font-medium text-ink">{name}</span>
+              <span className="tabular-nums text-ink-soft">
+                {count(v.count)} payments, {etb(v.minor)} ({share}%)
+              </span>
+            </div>
+            <div aria-hidden className="mt-1.5 h-2 overflow-hidden rounded-full bg-surface-2">
+              <div className="h-full rounded-full bg-accent" style={{ width: `${share}%` }} />
+            </div>
+          </li>
+        );
+      })}
+    </ul>
   );
 }

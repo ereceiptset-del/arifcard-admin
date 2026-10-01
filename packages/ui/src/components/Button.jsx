@@ -1,28 +1,39 @@
-import { forwardRef } from "react";
+import { forwardRef, useId } from "react";
 import { Spinner } from "./Spinner.jsx";
 
 const VARIANTS = {
-  primary:
-    "bg-brand text-white hover:bg-brand-hover active:bg-brand-active disabled:bg-brand-muted",
-  secondary:
-    "border border-line-strong dark:border-line-strong-dark text-ink dark:text-ink-dark hover:bg-panel-muted dark:hover:bg-white/5 disabled:opacity-55",
-  ghost:
-    "text-ink-soft dark:text-ink-muted-dark hover:bg-panel-muted dark:hover:bg-white/5 disabled:opacity-55",
-  danger: "bg-danger text-white hover:brightness-110 disabled:opacity-55",
+  primary: ["bg-accent text-on-accent", "hover:bg-accent-hover"],
+  secondary: ["border border-line-strong bg-surface-1 text-ink", "hover:bg-surface-2"],
+  ghost: ["text-ink-soft", "hover:bg-surface-2 hover:text-ink"],
+  destructive: ["bg-danger text-surface-1", "hover:opacity-90"],
+  // Older name, same look.
+  danger: ["bg-danger text-surface-1", "hover:opacity-90"],
 };
 
 const SIZES = {
-  sm: "h-8 px-3 text-[12.5px] gap-1.5",
-  md: "h-10 px-4 text-[13px] gap-2",
-  lg: "h-11 px-5 text-[14px] gap-2",
+  // `sm` is for dense desktop tables: 44px on phones and touch screens, 36px from `sm` up.
+  sm: "h-11 sm:h-9 px-3 text-small gap-1.5 pointer-coarse:min-h-11",
+  md: "h-11 px-4 text-small gap-2",
+  lg: "h-12 px-5 text-body gap-2",
 };
 
+/** Button look for elements that are not <button> (e.g. a router Link). */
+export function buttonClasses({ variant = "primary", size = "md", className = "" } = {}) {
+  const [look, hover] = VARIANTS[variant] || VARIANTS.primary;
+  return `inline-flex shrink-0 items-center justify-center whitespace-nowrap rounded-control font-semibold transition-colors duration-150 ${look} ${hover} ${
+    SIZES[size] || SIZES.md
+  } ${className}`;
+}
+
 /**
- * Primary action control.
+ * Action control.
  *
- * `disabledReason` is required whenever a button is disabled for a reason
- * the user cannot see — it becomes the tooltip and the accessible title,
- * so no control is ever silently dead.
+ * A disabled button with a `disabledReason` stays focusable (it uses
+ * `aria-disabled`, not `disabled`), ignores clicks, and exposes the reason
+ * as its accessible description and hover tooltip — so a keyboard or
+ * screen-reader user can find out why it does nothing. Without a reason it
+ * falls back to the native `disabled` attribute. Several buttons that share
+ * one visible reason pass that element's id as `reasonId`.
  */
 export const Button = forwardRef(function Button(
   {
@@ -31,26 +42,47 @@ export const Button = forwardRef(function Button(
     loading = false,
     disabled = false,
     disabledReason,
+    reasonId: externalReasonId,
     icon: Icon,
     className = "",
     children,
+    onClick,
+    type,
     ...props
   },
   ref
 ) {
-  const isDisabled = disabled || loading;
+  const ownReasonId = useId();
+  // Several buttons sharing one visible reason pass its element id instead.
+  const reasonId = externalReasonId || ownReasonId;
+  const blocked = disabled || loading;
+  const explained = blocked && Boolean(disabledReason) && !loading;
+  const [look, hover] = VARIANTS[variant] || VARIANTS.primary;
 
   return (
-    <button
-      ref={ref}
-      disabled={isDisabled}
-      title={isDisabled && disabledReason ? disabledReason : undefined}
-      aria-disabled={isDisabled || undefined}
-      className={`inline-flex items-center justify-center rounded-field font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40 disabled:cursor-not-allowed ${VARIANTS[variant]} ${SIZES[size]} ${className}`}
-      {...props}
-    >
-      {loading ? <Spinner size={15} /> : Icon ? <Icon size={15} /> : null}
-      {children}
-    </button>
+    <>
+      <button
+        ref={ref}
+        type={type}
+        disabled={blocked && !explained}
+        aria-disabled={explained || undefined}
+        aria-busy={loading || undefined}
+        aria-describedby={explained ? reasonId : undefined}
+        title={explained ? disabledReason : undefined}
+        onClick={blocked ? (event) => event.preventDefault() : onClick}
+        className={`inline-flex shrink-0 items-center justify-center whitespace-nowrap rounded-control font-semibold transition-colors duration-150 ${look} ${blocked ? "cursor-not-allowed opacity-50" : hover} ${
+          SIZES[size] || SIZES.md
+        } ${className}`}
+        {...props}
+      >
+        {loading ? <Spinner size={16} /> : Icon ? <Icon size={16} aria-hidden /> : null}
+        {children}
+      </button>
+      {explained && !externalReasonId && (
+        <span id={reasonId} className="sr-only">
+          {disabledReason}
+        </span>
+      )}
+    </>
   );
 });

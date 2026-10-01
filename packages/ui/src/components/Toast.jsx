@@ -4,9 +4,9 @@ import { CheckCircle2, AlertCircle, Info, X } from "lucide-react";
 const ToastContext = createContext(null);
 
 const TONE_STYLES = {
-  success: { icon: CheckCircle2, ring: "border-ok/30 bg-ok/10", color: "text-ok" },
-  error: { icon: AlertCircle, ring: "border-danger/30 bg-danger/10", color: "text-danger" },
-  info: { icon: Info, ring: "border-info/30 bg-info/10", color: "text-info" },
+  success: { icon: CheckCircle2, ring: "border-line", color: "text-success" },
+  error: { icon: AlertCircle, ring: "border-line", color: "text-danger" },
+  info: { icon: Info, ring: "border-line", color: "text-info" },
 };
 
 let nextId = 0;
@@ -43,7 +43,7 @@ export function ToastProvider({ children, duration = 5000 }) {
     <ToastContext.Provider value={value}>
       {children}
       <div
-        className="pointer-events-none fixed inset-x-0 top-4 z-[100] flex flex-col items-center gap-2 px-4"
+        className="pointer-events-none fixed inset-x-0 top-4 z-[60] flex flex-col items-center gap-2 px-4"
         aria-live="polite"
         aria-atomic="false"
       >
@@ -65,20 +65,20 @@ function ToastItem({ toast, duration, onDismiss }) {
 
   return (
     <div
-      className={`pointer-events-auto flex w-full max-w-sm items-start gap-2.5 rounded-panel border ${ring} bg-panel dark:bg-panel-dark px-4 py-3 shadow-raised opacity-100 translate-y-0 transition-[opacity,transform] duration-200 starting:opacity-0 starting:-translate-y-2`}
+      className={`pointer-events-auto flex w-full max-w-sm items-start gap-2.5 rounded-control border ${ring} bg-surface-3 px-4 py-3 shadow-e1 opacity-100 translate-y-0 transition-[opacity,transform] duration-200 starting:opacity-0 starting:-translate-y-2`}
     >
       <Icon size={16} className={`mt-px shrink-0 ${color}`} />
       <div className="min-w-0 flex-1">
         {toast.title && (
-          <p className="text-[13px] font-semibold text-ink dark:text-ink-dark">{toast.title}</p>
+          <p className="text-small font-semibold text-ink">{toast.title}</p>
         )}
-        <p className="text-[13px] text-ink-soft dark:text-ink-muted-dark">{toast.message}</p>
+        <p className="text-small text-ink-soft">{toast.message}</p>
       </div>
       <button
         type="button"
         onClick={() => onDismiss(toast.id)}
         aria-label="Dismiss notification"
-        className="shrink-0 rounded p-0.5 text-ink-faint hover:text-ink dark:hover:text-ink-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40"
+        className="shrink-0 rounded p-0.5 text-ink-muted hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
       >
         <X size={14} />
       </button>

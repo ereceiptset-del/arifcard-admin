@@ -1,6 +1,7 @@
 import { useState } from "react";
-import { Link, useSearchParams } from "react-router-dom";
-import { Panel, Table, Badge, Skeleton, ErrorState, EmptyState, TextInput } from "@addiscard/ui";
+import { useNavigate, useSearchParams } from "react-router-dom";
+import { Search, ShieldCheck } from "lucide-react";
+import { Panel, PageHeader, Table, StatusPill, Skeleton, ErrorState, EmptyState, Button, timeAgo, formatDateTime } from "@addiscard/ui";
 import { adminService, KYC_STATUS, KYC_STATUS_LABEL, KYC_STATUS_TONE, KYC_METHOD_LABEL } from "@addiscard/services";
 import { useAsync } from "../../hooks/useAsync.js";
 
@@ -13,30 +14,26 @@ const FILTERS = [
   { value: KYC_STATUS.REJECTED, label: "Not approved" },
 ];
 
+const OPEN = [KYC_STATUS.PENDING, KYC_STATUS.UNDER_REVIEW];
+
+/**
+ * The identity review queue. Filter and search live in the URL so a
+ * reviewer can bookmark or share the exact view they are working from.
+ * The backend returns the whole matching list; there is no cursor.
+ */
 export default function KycQueuePage() {
-  // Filter state lives in the URL so a reviewer can bookmark or share the
-  // exact view they are working from.
+  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const status = searchParams.get("status") || "all";
-  const [query, setQuery] = useState(searchParams.get("q") || "");
+  const q = searchParams.get("q") || "";
+  const [query, setQuery] = useState(q);
 
-  const { data, error, loading, reload } = useAsync(
-    () => adminService.kycCases({ status, q: searchParams.get("q") || undefined }),
-    [status, searchParams.get("q")]
-  );
+  const { data, error, loading, reload } = useAsync(() => adminService.kycCases({ status, q: q || undefined }), [status, q]);
 
-  const applyQuery = (value) => {
-    setQuery(value);
+  const update = (key, value) => {
     const next = new URLSearchParams(searchParams);
-    if (value) next.set("q", value);
-    else next.delete("q");
-    setSearchParams(next, { replace: true });
-  };
-
-  const setStatus = (value) => {
-    const next = new URLSearchParams(searchParams);
-    if (value === "all") next.delete("status");
-    else next.set("status", value);
+    if (value && value !== "all") next.set(key, value);
+    else next.delete(key);
     setSearchParams(next, { replace: true });
   };
 
@@ -45,87 +42,107 @@ export default function KycQueuePage() {
       key: "customer",
       header: "Customer",
       render: (row) => (
-        <Link to={`/kyc/${row.id}`} className="block min-w-0">
-          <p className="truncate font-medium text-ink dark:text-ink-dark">
-            {row.customer?.name || "Unknown"}
-          </p>
-          <p className="truncate text-[12px] text-ink-faint">{row.customer?.email}</p>
-        </Link>
+        <span className="block min-w-0">
+          <span className="block truncate">{row.customer?.name || "Name not given"}</span>
+          <span className="block truncate text-caption font-normal text-ink-muted">{row.customer?.email}</span>
+        </span>
       ),
     },
-    { key: "method", header: "Method", render: (row) => KYC_METHOD_LABEL[row.method] || row.method },
+    { key: "method", header: "Document", hideBelow: "md", render: (row) => KYC_METHOD_LABEL[row.method] || row.method },
     {
       key: "submittedAt",
       header: "Submitted",
-      render: (row) => (row.submittedAt ? new Date(row.submittedAt).toLocaleDateString() : "—"),
+      render: (row) =>
+        row.submittedAt ? (
+          <span>
+            <span className="block">{formatDateTime(row.submittedAt)}</span>
+            {OPEN.includes(row.kycStatus) && <span className="block text-caption text-ink-muted">Waiting {timeAgo(row.submittedAt).replace(" ago", "")}</span>}
+          </span>
+        ) : (
+          "Not submitted"
+        ),
     },
-    { key: "version", header: "Version", align: "right", render: (row) => `v${row.version || 1}` },
+    { key: "version", header: "Version", align: "right", hideBelow: "lg", render: (row) => `v${row.version || 1}` },
     {
       key: "kycStatus",
       header: "Status",
-      align: "right",
-      render: (row) => (
-        <Badge tone={KYC_STATUS_TONE[row.kycStatus] || "neutral"}>
-          {KYC_STATUS_LABEL[row.kycStatus] || row.kycStatus}
-        </Badge>
-      ),
+      render: (row) => <StatusPill tone={KYC_STATUS_TONE[row.kycStatus] || "neutral"}>{KYC_STATUS_LABEL[row.kycStatus] || row.kycStatus}</StatusPill>,
     },
   ];
 
   return (
-    <>
-      <h1 className="text-[22px] font-semibold tracking-tight text-ink dark:text-ink-dark">
-        Identity review
-      </h1>
-      <p className="mt-1 text-[13.5px] text-ink-muted dark:text-ink-muted-dark">
-        Manual review of documents customers uploaded.
-      </p>
+    <div className="flex flex-col gap-6">
+      <PageHeader title="KYC verification" description="Manual review of the documents customers upload. You make the decision; nothing is approved automatically." />
 
-      <div className="mt-6 flex flex-col gap-5">
-        <div className="flex flex-wrap items-center gap-2">
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+        <div role="group" aria-label="Status" className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1">
           {FILTERS.map((filter) => (
             <button
               key={filter.value}
               type="button"
-              onClick={() => setStatus(filter.value)}
-              className={`rounded-field px-3 py-1.5 text-[12.5px] font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40 ${
-                status === filter.value
-                  ? "bg-brand text-white"
-                  : "bg-panel-muted dark:bg-white/5 text-ink-muted dark:text-ink-muted-dark hover:text-ink dark:hover:text-ink-dark"
+              aria-pressed={status === filter.value}
+              onClick={() => update("status", filter.value)}
+              className={`min-h-11 shrink-0 rounded-full border px-4 text-small font-medium ${
+                status === filter.value ? "border-accent bg-accent-soft text-accent-ink" : "border-line-strong bg-surface-1 text-ink-soft hover:bg-surface-2"
               }`}
             >
               {filter.label}
             </button>
           ))}
         </div>
+        <form
+          role="search"
+          className="flex gap-2"
+          onSubmit={(event) => {
+            event.preventDefault();
+            update("q", query.trim());
+          }}
+        >
+          <label htmlFor="kyc-search" className="sr-only">
+            Search cases by name, email or case ID
+          </label>
+          <input
+            id="kyc-search"
+            type="search"
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            placeholder="Name, email or case ID"
+            className="h-11 w-full min-w-0 rounded-control border border-line-strong bg-surface-1 px-3 text-small text-ink placeholder:text-ink-muted focus:outline-none focus:ring-2 focus:ring-accent/25 lg:w-72"
+          />
+          <Button type="submit" variant="secondary" icon={Search}>
+            Search
+          </Button>
+        </form>
+      </div>
 
-        <TextInput
-          label="Search"
-          placeholder="Name, email or case ID"
-          value={query}
-          onChange={(event) => applyQuery(event.target.value)}
-        />
-
-        {loading && <Skeleton className="h-[280px] w-full" />}
-
-        {!loading && error && (
-          <ErrorState title="Could not load the queue" message={error.message} onRetry={reload} />
+      <Panel padded={false}>
+        {loading && (
+          <div aria-busy="true" className="flex flex-col gap-2 p-4 sm:p-6">
+            <Skeleton className="h-12 w-full" />
+            <Skeleton className="h-12 w-full" />
+            <Skeleton className="h-12 w-full" />
+          </div>
         )}
-
+        {!loading && error && (
+          <div className="p-4 sm:p-6">
+            <ErrorState title="We couldn't load the queue" error={error} onRetry={reload} />
+          </div>
+        )}
         {!loading && !error && (
-          <Panel padded={false}>
+          <>
             {data?.cases?.length ? (
-              <Table columns={columns} rows={data.cases} caption="Identity cases" />
+              <Table columns={columns} rows={data.cases} caption="Identity cases" onRowClick={(row) => navigate(`/kyc/${row.id}`)} />
             ) : (
               <EmptyState
-                title="Nothing here"
-                description="No case matches this filter."
-                dashed
+                headingLevel={2}
+                icon={ShieldCheck}
+                title={q || status !== "all" ? "No cases match" : "No cases yet"}
+                description={q || status !== "all" ? "Try another status or search." : "Cases appear here when customers submit their documents."}
               />
             )}
-          </Panel>
+          </>
         )}
-      </div>
-    </>
+      </Panel>
+    </div>
   );
 }
