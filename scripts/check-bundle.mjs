@@ -17,7 +17,8 @@ const dist = fileURLToPath(new URL("../dist", import.meta.url));
 export const FORBIDDEN = [
   "Create an account", // sign-up
   "PaymentDialog", // customer payments
-  "Card issuer verification", // customer onboarding panel
+  "Card issuer verification", // customer onboarding panel (older title)
+  "Card issuer check", // customer onboarding panel (redesign title)
   "Order a card", // customer card orders
   "addiscard_customer", // (guard: no customer storage keys)
   "/customer/verification",
@@ -25,7 +26,8 @@ export const FORBIDDEN = [
 ];
 
 /** Strings the console must contain. */
-export const REQUIRED = ["Identity verification", "Audit logs", "Access denied"];
+// "KYC verification" is the console's section name since the redesign (was "Identity verification").
+export const REQUIRED = ["KYC verification", "Audit logs", "Access denied"];
 
 export function checkBundle(dir = dist) {
   const problems = [];
