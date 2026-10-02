@@ -1,6 +1,5 @@
 import { useCallback, useState } from "react";
-import { Link } from "react-router-dom";
-import { Workflow, Webhook, RefreshCw, Users } from "lucide-react";
+import { Workflow, Webhook, RefreshCw } from "lucide-react";
 import {
   Panel,
   PageHeader,
@@ -16,7 +15,6 @@ import {
   TextArea,
   TextInput,
   useToast,
-  buttonClasses,
   formatDateTime,
 } from "@addiscard/ui";
 import { ApiError } from "@addiscard/services";
@@ -50,16 +48,12 @@ export default function CardOperationsPage() {
       <PageHeader
         title="Card operations"
         description="Requests we sent to the card issuer, and the events it sent back. The issuer and environment are shown in the header."
-        actions={
-          <Link to="/customers" className={buttonClasses({ variant: "secondary" })}>
-            <Users size={16} aria-hidden />
-            Card orders by customer
-          </Link>
-        }
+        // CODEGO DISABLED (owner decision, 2026-10-02): card issuing moves to Bitnob. The 'Card orders by customer' link pointed at the Codego tabs.
       />
       <p className="max-w-[80ch] rounded-control bg-surface-2 px-4 py-3 text-small text-ink-soft">
-        Card orders, issuance and funding are recorded per customer: open a customer, then <strong className="text-ink">Cards and funding</strong>.
-        Card balances, a card list and card transactions aren't in the backend, so they aren't shown here.
+        {/* CODEGO DISABLED (owner decision, 2026-10-02): Codego card orders and funding are switched off. */}
+        Card issuing is moving to a new card provider (Bitnob). Codego card orders and funding are switched off; requests to the card
+        provider and the events it sends back still appear below.
       </p>
       <Operations />
       <Events />

@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
-import { Users, RefreshCw, Search } from "lucide-react";
-import { Panel, PageHeader, Table, StatusPill, ErrorState, EmptyState, Skeleton, Drawer, Tabs, TabPanel, Button, useToast, formatMoney, formatDate, formatDateTime } from "@addiscard/ui";
+import { Users, Search } from "lucide-react";
+import { Panel, PageHeader, Table, StatusPill, ErrorState, EmptyState, Skeleton, Drawer, Tabs, TabPanel, Button, formatMoney, formatDate, formatDateTime } from "@addiscard/ui";
 import {
   adminService,
-  ISSUER_ONBOARDING_LABEL,
-  ISSUER_ONBOARDING_TONE,
+  // CODEGO DISABLED (owner decision, 2026-10-02): card issuing moves to Bitnob.
+  // ISSUER_ONBOARDING_LABEL,
+  // ISSUER_ONBOARDING_TONE,
   PAYMENT_STATUS_LABEL,
   PAYMENT_STATUS_TONE,
   KYC_STATUS,
@@ -14,8 +15,9 @@ import {
   KYC_METHOD_LABEL,
 } from "@addiscard/services";
 import { useAsync } from "../../hooks/useAsync.js";
-import IssuerFunding from "../../components/admin/IssuerFunding.jsx";
-import IssuerCardOrders from "../../components/admin/IssuerCardOrders.jsx";
+// CODEGO DISABLED (owner decision, 2026-10-02): card issuing moves to Bitnob.
+// import IssuerFunding from "../../components/admin/IssuerFunding.jsx";
+// import IssuerCardOrders from "../../components/admin/IssuerCardOrders.jsx";
 
 /**
  * Customers.
@@ -186,8 +188,9 @@ const TABS = [
   { value: "overview", label: "Overview" },
   { value: "kyc", label: "KYC" },
   { value: "payments", label: "Payments" },
-  { value: "issuer", label: "Card issuer" },
-  { value: "cards", label: "Cards and funding" },
+  // CODEGO DISABLED (owner decision, 2026-10-02): card issuing moves to Bitnob.
+  // { value: "issuer", label: "Card issuer" },
+  // { value: "cards", label: "Cards and funding" },
 ];
 
 /** One customer in full. The only place the real email is shown. */
@@ -271,13 +274,14 @@ function CustomerDrawer({ uid, onClose }) {
                 </>
               ))}
 
+            {/* CODEGO DISABLED (owner decision, 2026-10-02): card issuing moves to Bitnob.
             {tab === "issuer" && <IssuerOnboarding uid={uid} />}
             {tab === "cards" && (
-              <div className="flex flex-col gap-6">
-                <IssuerCardOrders uid={uid} />
-                <IssuerFunding uid={uid} />
-              </div>
-            )}
+            <div className="flex flex-col gap-6">
+            <IssuerCardOrders uid={uid} />
+            <IssuerFunding uid={uid} />
+            </div>
+            )} */}
           </TabPanel>
         </div>
       )}
@@ -285,63 +289,65 @@ function CustomerDrawer({ uid, onClose }) {
   );
 }
 
-/**
- * The customer's onboarding with the card issuer. Deliberately its own
- * section, apart from KYC: Arifcard's review and the issuer's verification
- * are two different decisions, by two different parties, and neither
- * changes the other. Staff can read it and an administrator can ask the
- * issuer again — nobody can set it.
- */
-function IssuerOnboarding({ uid }) {
-  const toast = useToast();
-  const load = useCallback(() => adminService.issuerOnboarding(uid), [uid]);
-  const { data, error, loading, setData } = useAsync(load, [uid]);
-  const [refreshing, setRefreshing] = useState(false);
-  const o = data?.onboarding;
+// CODEGO DISABLED (owner decision, 2026-10-02): card issuing moves to Bitnob.
+// /**
+//  * The customer's onboarding with the card issuer. Deliberately its own
+//  * section, apart from KYC: Arifcard's review and the issuer's verification
+//  * are two different decisions, by two different parties, and neither
+//  * changes the other. Staff can read it and an administrator can ask the
+//  * issuer again — nobody can set it.
+//  */
+// function IssuerOnboarding({ uid }) {
+//   const toast = useToast();
+//   const load = useCallback(() => adminService.issuerOnboarding(uid), [uid]);
+//   const { data, error, loading, setData } = useAsync(load, [uid]);
+//   const [refreshing, setRefreshing] = useState(false);
+//   const o = data?.onboarding;
+//
+//   const refresh = async () => {
+//     setRefreshing(true);
+//     try {
+//       const result = await adminService.refreshIssuerOnboarding(uid);
+//       setData({ onboarding: result.onboarding });
+//       if (result.refreshed) toast.success("Checked with the card issuer.");
+//       else toast.info(`Not checked: ${result.reason || "the issuer is unavailable"}.`);
+//     } catch (problem) {
+//       toast.error(problem?.message || "We couldn't check with the card issuer. Try again.");
+//     } finally {
+//       setRefreshing(false);
+//     }
+//   };
+//
+//   return (
+//     <div className="flex flex-col gap-3">
+//       <div className="flex items-center justify-between gap-3">
+//         <h3 className="text-h3 text-ink">Card issuer onboarding</h3>
+//         {o && (
+//           <Button variant="secondary" size="sm" icon={RefreshCw} loading={refreshing} onClick={refresh}>
+//             Check with issuer
+//           </Button>
+//         )}
+//       </div>
+//       {loading && <Skeleton className="h-24 w-full rounded-control" />}
+//       {!loading && error && <ErrorState title="We couldn't load the issuer record" error={error} />}
+//       {!loading && o && (
+//         <dl className="divide-y divide-line rounded-control border border-line">
+//           <Row label="State" value={<StatusPill tone={ISSUER_ONBOARDING_TONE[o.state]}>{ISSUER_ONBOARDING_LABEL[o.state] || o.state}</StatusPill>} />
+//           <Row label="Application status" value={o.applicationStatus || "Not recorded"} />
+//           {o.applicationReason && <Row label="Reason codes" value={o.applicationReason} />}
+//           <Row label="Session" value={o.session ? `${o.session.status}${o.session.resumable ? "" : " (can't be resumed)"}` : "None"} />
+//           <Row label="Our reference" value={o.externalUserId || "Not recorded"} />
+//           <Row label="Issuer user ID" value={o.providerUserId || "Not recorded"} />
+//           <Row label="Last event" value={o.lastEventAt ? formatDateTime(o.lastEventAt) : "None yet"} />
+//           <Row label="Last checked" value={o.lastRefreshedAt ? formatDateTime(o.lastRefreshedAt) : "Never"} />
+//           {o.correlationProblem && <Row label="Correlation problem" value={o.correlationProblem} />}
+//           {o.gateBlocks?.length > 0 && <Row label="Blocked by" value={o.gateBlocks.map((b) => b.reason).join(" ")} />}
+//         </dl>
+//       )}
+//     </div>
+//   );
+// }
 
-  const refresh = async () => {
-    setRefreshing(true);
-    try {
-      const result = await adminService.refreshIssuerOnboarding(uid);
-      setData({ onboarding: result.onboarding });
-      if (result.refreshed) toast.success("Checked with the card issuer.");
-      else toast.info(`Not checked: ${result.reason || "the issuer is unavailable"}.`);
-    } catch (problem) {
-      toast.error(problem?.message || "We couldn't check with the card issuer. Try again.");
-    } finally {
-      setRefreshing(false);
-    }
-  };
-
-  return (
-    <div className="flex flex-col gap-3">
-      <div className="flex items-center justify-between gap-3">
-        <h3 className="text-h3 text-ink">Card issuer onboarding</h3>
-        {o && (
-          <Button variant="secondary" size="sm" icon={RefreshCw} loading={refreshing} onClick={refresh}>
-            Check with issuer
-          </Button>
-        )}
-      </div>
-      {loading && <Skeleton className="h-24 w-full rounded-control" />}
-      {!loading && error && <ErrorState title="We couldn't load the issuer record" error={error} />}
-      {!loading && o && (
-        <dl className="divide-y divide-line rounded-control border border-line">
-          <Row label="State" value={<StatusPill tone={ISSUER_ONBOARDING_TONE[o.state]}>{ISSUER_ONBOARDING_LABEL[o.state] || o.state}</StatusPill>} />
-          <Row label="Application status" value={o.applicationStatus || "Not recorded"} />
-          {o.applicationReason && <Row label="Reason codes" value={o.applicationReason} />}
-          <Row label="Session" value={o.session ? `${o.session.status}${o.session.resumable ? "" : " (can't be resumed)"}` : "None"} />
-          <Row label="Our reference" value={o.externalUserId || "Not recorded"} />
-          <Row label="Issuer user ID" value={o.providerUserId || "Not recorded"} />
-          <Row label="Last event" value={o.lastEventAt ? formatDateTime(o.lastEventAt) : "None yet"} />
-          <Row label="Last checked" value={o.lastRefreshedAt ? formatDateTime(o.lastRefreshedAt) : "Never"} />
-          {o.correlationProblem && <Row label="Correlation problem" value={o.correlationProblem} />}
-          {o.gateBlocks?.length > 0 && <Row label="Blocked by" value={o.gateBlocks.map((b) => b.reason).join(" ")} />}
-        </dl>
-      )}
-    </div>
-  );
-}
 
 function Row({ label, value }) {
   return (

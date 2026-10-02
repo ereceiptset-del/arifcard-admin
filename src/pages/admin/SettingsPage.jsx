@@ -1,6 +1,6 @@
-import { useCallback, useState } from "react";
-import { CircleCheck, CircleDashed, ShieldCheck, PlugZap } from "lucide-react";
-import { Panel, PageHeader, StatusPill, ErrorState, Skeleton, Button, formatDateTime } from "@addiscard/ui";
+import { useCallback } from "react";
+import { CircleCheck, CircleDashed, ShieldCheck } from "lucide-react";
+import { Panel, PageHeader, StatusPill, ErrorState, Skeleton } from "@addiscard/ui";
 import { adminService } from "@addiscard/services";
 import { useAuth } from "../../context/AuthContext";
 import { useAsync } from "../../hooks/useAsync.js";
@@ -82,63 +82,64 @@ export default function SettingsPage() {
               })}
             </ul>
           </Panel>
-          <ConnectionCheck />
+          {/* CODEGO DISABLED (owner decision, 2026-10-02): card issuing moves to Bitnob. <ConnectionCheck /> */}
         </>
       )}
     </div>
   );
 }
 
-/**
- * One read-only request to the card issuer, made by the server from its own
- * network. Administrator only (the backend refuses anyone else). Shows the
- * shape of the answer — status and count — never card data.
- */
-function ConnectionCheck() {
-  const [state, setState] = useState({ busy: false, result: null, error: null });
-  const run = async () => {
-    setState({ busy: true, result: null, error: null });
-    try {
-      const { check, checkedAt } = await adminService.checkProviderConnection();
-      setState({ busy: false, result: { ...check, checkedAt }, error: null });
-    } catch (problem) {
-      setState({ busy: false, result: null, error: problem?.message || "The check couldn't run." });
-    }
-  };
-  const r = state.result;
-
-  return (
-    <Panel
-      title="Card issuer connection"
-      description="Sends one read-only request to the card issuer from this server, to confirm the key and network work. Administrators only."
-      action={
-        <Button size="sm" variant="secondary" icon={PlugZap} loading={state.busy} onClick={run}>
-          Test connection
-        </Button>
-      }
-    >
-      <div aria-live="polite">
-        {!r && !state.error && <p className="text-small text-ink-muted">Not tested in this session.</p>}
-        {state.error && (
-          <p role="alert" className="text-small text-danger">
-            {state.error}
-          </p>
-        )}
-        {r && (
-          <div className="flex flex-col gap-2">
-            <StatusPill tone={r.ok ? "success" : "danger"}>{r.ok ? `Connected (${r.environment})` : "Not connected"}</StatusPill>
-            <p className="text-small text-ink-soft">
-              {r.ok
-                ? `HTTP ${r.httpStatus}. ${r.cardCount ?? "An unknown number of"} card${r.cardCount === 1 ? "" : "s"} in the programme.`
-                : `${r.error?.code ? `${r.error.code}: ` : ""}${r.error?.message || "No details returned."}`}
-            </p>
-            <p className="text-caption text-ink-muted">Checked {formatDateTime(r.checkedAt)}</p>
-          </div>
-        )}
-      </div>
-    </Panel>
-  );
-}
+// CODEGO DISABLED (owner decision, 2026-10-02): card issuing moves to Bitnob.
+// /**
+//  * One read-only request to the card issuer, made by the server from its own
+//  * network. Administrator only (the backend refuses anyone else). Shows the
+//  * shape of the answer — status and count — never card data.
+//  */
+// function ConnectionCheck() {
+//   const [state, setState] = useState({ busy: false, result: null, error: null });
+//   const run = async () => {
+//     setState({ busy: true, result: null, error: null });
+//     try {
+//       const { check, checkedAt } = await adminService.checkProviderConnection();
+//       setState({ busy: false, result: { ...check, checkedAt }, error: null });
+//     } catch (problem) {
+//       setState({ busy: false, result: null, error: problem?.message || "The check couldn't run." });
+//     }
+//   };
+//   const r = state.result;
+//
+//   return (
+//     <Panel
+//       title="Card issuer connection"
+//       description="Sends one read-only request to the card issuer from this server, to confirm the key and network work. Administrators only."
+//       action={
+//         <Button size="sm" variant="secondary" icon={PlugZap} loading={state.busy} onClick={run}>
+//           Test connection
+//         </Button>
+//       }
+//     >
+//       <div aria-live="polite">
+//         {!r && !state.error && <p className="text-small text-ink-muted">Not tested in this session.</p>}
+//         {state.error && (
+//           <p role="alert" className="text-small text-danger">
+//             {state.error}
+//           </p>
+//         )}
+//         {r && (
+//           <div className="flex flex-col gap-2">
+//             <StatusPill tone={r.ok ? "success" : "danger"}>{r.ok ? `Connected (${r.environment})` : "Not connected"}</StatusPill>
+//             <p className="text-small text-ink-soft">
+//               {r.ok
+//                 ? `HTTP ${r.httpStatus}. ${r.cardCount ?? "An unknown number of"} card${r.cardCount === 1 ? "" : "s"} in the programme.`
+//                 : `${r.error?.code ? `${r.error.code}: ` : ""}${r.error?.message || "No details returned."}`}
+//             </p>
+//             <p className="text-caption text-ink-muted">Checked {formatDateTime(r.checkedAt)}</p>
+//           </div>
+//         )}
+//       </div>
+//     </Panel>
+//   );
+// }
 
 function Row({ label, value }) {
   return (
