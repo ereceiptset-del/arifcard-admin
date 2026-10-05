@@ -18,6 +18,7 @@ import { useAsync } from "../../hooks/useAsync.js";
 // CODEGO DISABLED (owner decision, 2026-10-02): card issuing moves to Bitnob.
 // import IssuerFunding from "../../components/admin/IssuerFunding.jsx";
 // import IssuerCardOrders from "../../components/admin/IssuerCardOrders.jsx";
+import BitnobCustomer from "../../components/admin/BitnobCustomer.jsx";
 
 /**
  * Customers.
@@ -191,6 +192,7 @@ const TABS = [
   // CODEGO DISABLED (owner decision, 2026-10-02): card issuing moves to Bitnob.
   // { value: "issuer", label: "Card issuer" },
   // { value: "cards", label: "Cards and funding" },
+  { value: "bitnob", label: "Card provider" },
 ];
 
 /** One customer in full. The only place the real email is shown. */
@@ -282,6 +284,7 @@ function CustomerDrawer({ uid, onClose }) {
             <IssuerFunding uid={uid} />
             </div>
             )} */}
+            {tab === "bitnob" && <BitnobCustomer uid={uid} />}
           </TabPanel>
         </div>
       )}

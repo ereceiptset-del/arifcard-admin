@@ -20,6 +20,7 @@ import {
 import { ApiError } from "@addiscard/services";
 import { useAsync } from "../../hooks/useAsync.js";
 import { providerOps, OPERATION_LABEL, OPERATION_TONE, EVENT_LABEL, EVENT_TONE } from "../../data/providerOps.js";
+import { bitnobAdmin, ATTENTION_LABEL } from "../../data/bitnobAdmin.js";
 
 /**
  * Card operations: what Arifcard asked the card issuer to do, and what
@@ -55,6 +56,7 @@ export default function CardOperationsPage() {
         Card issuing is moving to a new card provider (Bitnob). Codego card orders and funding are switched off; requests to the card
         provider and the events it sends back still appear below.
       </p>
+      <BitnobAttention />
       <Operations />
       <Events />
     </div>
@@ -78,6 +80,47 @@ function FilterChips({ label, values, value, onChange, labels }) {
         </button>
       ))}
     </div>
+  );
+}
+
+/**
+ * Card provider (Bitnob, sandbox): what needs a person or a reconciliation.
+ * Read-only — reconciliation is done from the operator's allowlisted
+ * machine (npm run bitnob:card -- --reconcile), and nothing here sets a
+ * Bitnob outcome, a balance or a card state.
+ */
+function BitnobAttention() {
+  const load = useCallback(() => bitnobAdmin.attention(), []);
+  const { data, error, loading, reload } = useAsync(load, []);
+  const rows = (data?.items || []).map((item, i) => ({ ...item, id: `${item.kind}-${item.uid || "?"}-${i}` }));
+  const columns = [
+    { key: "kind", header: "Needs", render: (r) => ATTENTION_LABEL[r.kind] || r.kind },
+    { key: "status", header: "Status", render: (r) => <StatusPill tone={r.kind === "top_up_requested" ? "info" : "warning"}>{r.status}</StatusPill> },
+    { key: "uid", header: "Customer", hideBelow: "md", render: (r) => <span className="break-all text-caption">{r.uid || "Not recorded"}</span> },
+    {
+      key: "detail",
+      header: "Detail",
+      hideBelow: "lg",
+      render: (r) =>
+        r.lastError ? `${r.lastError.code || ""} ${r.lastError.status ?? ""}`.trim() : r.amountCents != null ? `${(r.amountCents / 100).toFixed(2)} ${r.currency}` : r.action || "—",
+    },
+    { key: "updatedAt", header: "Last change", hideBelow: "md", render: (r) => formatDateTime(r.updatedAt) || "Not recorded" },
+  ];
+  return (
+    <Panel title="Card provider: needs attention" description={`Bitnob ${data?.environment || "sandbox"}. Unknown outcomes are settled by reading Bitnob, never by sending again.`} padded={false}>
+      {loading && (
+        <div aria-busy="true" className="px-4 pb-4 sm:px-6">
+          <Skeleton className="h-12 w-full" />
+        </div>
+      )}
+      {!loading && error && (
+        <div className="px-4 pb-4 sm:px-6">
+          <ErrorState title="We couldn't load card provider items" error={error} onRetry={reload} headingLevel={3} />
+        </div>
+      )}
+      {!loading && !error && rows.length === 0 && <EmptyState compact icon={Workflow} title="Nothing needs attention" description="Unresolved submissions, card changes and top-up requests appear here." />}
+      {!loading && !error && rows.length > 0 && <Table caption="Card provider items needing attention" columns={columns} rows={rows} />}
+    </Panel>
   );
 }
 
