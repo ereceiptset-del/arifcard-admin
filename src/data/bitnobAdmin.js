@@ -11,6 +11,10 @@ import { backendApi } from "@addiscard/services";
 export const bitnobAdmin = {
   customer: (uid) => backendApi.get(`/admin/bitnob/customers/${encodeURIComponent(uid)}`, { auth: true }),
   attention: () => backendApi.get("/admin/bitnob/attention", { auth: true }),
+  /** Administrator, audited: link one verified ETB payment to card funding under the current rule. */
+  allocate: (intentId) => backendApi.post("/admin/bitnob/allocations", { intentId }, { auth: true }),
+  /** Administrator, audited: the agreed USD amount and its rate basis, as supplied (never computed). */
+  recordUsd: (id, body) => backendApi.post(`/admin/bitnob/allocations/${encodeURIComponent(id)}/usd`, body, { auth: true }),
 };
 
 export const KYC_STATE = {
@@ -40,4 +44,9 @@ export const ATTENTION_LABEL = {
   card_review_required: "Card needs review",
   card_operation_unresolved: "Card change unresolved",
   top_up_requested: "Top-up requested",
+  transaction_review_required: "Card transaction needs review",
+  funding_awaiting_usd_amount: "Funding: agreed USD amount needed",
+  funding_ready: "Funding: ready to send",
+  funding_unsettled: "Funding: not settled yet",
+  funding_amount_mismatch: "Funding: amount differs",
 };
