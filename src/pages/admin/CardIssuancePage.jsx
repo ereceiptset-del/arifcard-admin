@@ -81,15 +81,18 @@ function columns(section, setConfirm) {
       render: (r) =>
         section === "ready"
           ? formatDateTime(r.eligibleAt) || "—"
-          : r.blockers?.length
+          : r.state === "failed" && r.providerMessage
+            ? `Card provider refused: ${r.providerMessage}`
+            : r.blockers?.length
             ? r.blockers.map((b) => ISSUANCE_BLOCKER_LABEL[b] || b).join(" · ")
             : r.lastIssue
               ? `Last issue: ${r.lastIssue.outcome}${r.lastIssue.code ? ` (${ISSUANCE_BLOCKER_LABEL[r.lastIssue.code] || r.lastIssue.code})` : ""}`
               : "—",
     },
   ];
-  // A blocked attempt sent nothing to the provider, so it can be tried again
-  // (for example once test funds arrive); the backend re-checks everything.
+  // A blocked attempt sent nothing; a refused one created nothing. Either can
+  // be retried deliberately (for example once test funds arrive); the backend
+  // re-checks everything and sends at most one request per retry.
   if (section !== "ready" && section !== "attention") return base;
   return [
     ...base,
@@ -98,9 +101,9 @@ function columns(section, setConfirm) {
       header: "",
       align: "right",
       render: (r) =>
-        r.state === "ready_for_issuance" || r.state === "blocked" ? (
-          <Button size="sm" icon={Send} variant={r.state === "blocked" ? "secondary" : undefined} onClick={(event) => { event.stopPropagation(); setConfirm(r); }}>
-            {r.state === "blocked" ? "Retry issue" : "Issue card"}
+        r.state === "ready_for_issuance" || r.state === "blocked" || (r.state === "failed" && r.retryable) ? (
+          <Button size="sm" icon={Send} variant={r.state === "ready_for_issuance" ? undefined : "secondary"} onClick={(event) => { event.stopPropagation(); setConfirm(r); }}>
+            {r.state === "ready_for_issuance" ? "Issue card" : "Retry issue"}
           </Button>
         ) : null,
     },
