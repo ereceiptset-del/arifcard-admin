@@ -15,6 +15,38 @@ export const bitnobAdmin = {
   allocate: (intentId) => backendApi.post("/admin/bitnob/allocations", { intentId }, { auth: true }),
   /** Administrator, audited: the agreed USD amount and its rate basis, as supplied (never computed). */
   recordUsd: (id, body) => backendApi.post(`/admin/bitnob/allocations/${encodeURIComponent(id)}/usd`, body, { auth: true }),
+  /** Card issuance queue (staff read). */
+  issuance: () => backendApi.get("/admin/bitnob/issuance", { auth: true }),
+  /** Administrator: issue the card; the backend re-checks eligibility and funding. */
+  issue: (uid) => backendApi.post(`/admin/bitnob/issuance/${encodeURIComponent(uid)}/issue`, {}, { auth: true }),
+};
+
+export const ISSUANCE_LABEL = {
+  not_eligible: ["neutral", "Not eligible yet"],
+  awaiting_payment: ["neutral", "Awaiting payment"],
+  ready_for_issuance: ["info", "Ready for issuance"],
+  provisioning: ["warning", "Provisioning"],
+  active: ["success", "Active"],
+  failed: ["danger", "Failed"],
+  unknown: ["warning", "Outcome unknown — reconcile"],
+  blocked: ["attention", "Issuance blocked"],
+};
+
+export const ISSUANCE_BLOCKER_LABEL = {
+  ARIFCARD_KYC_NOT_APPROVED: "Customer not verified",
+  PROVIDER_DETAILS_INCOMPLETE: "Provider details incomplete",
+  CONSENT_MISSING: "Consent missing",
+  PAYMENT_NOT_VERIFIED: "Payment not verified",
+  BITNOB_KYC_REQUIRED: "Provider KYC required",
+  CARD_ALREADY_EXISTS: "Card already exists",
+  INSUFFICIENT_SANDBOX_FUNDS: "Sandbox provider test balance is insufficient",
+  FUNDING_SOURCE_UNCONFIRMED: "Provider funding balance not confirmed",
+  FUNDING_CHECK_FAILED: "Provider balance could not be read",
+  PROVIDER_NOT_AVAILABLE_HERE: "This server cannot call the provider",
+  CARD_TEST_NOT_ALLOWED: "Customer not on the sandbox test list",
+  AMOUNT_UNITS_UNCONFIRMED: "Provider amount units not confirmed",
+  KYC_REQUIRED: "Provider KYC required",
+  CUSTOMER_FIELDS_MISSING: "Cardholder details missing",
 };
 
 export const KYC_STATE = {

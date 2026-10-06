@@ -1,6 +1,6 @@
 import { useCallback, useState } from "react";
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
-import { LayoutDashboard, Users, ShieldCheck, CreditCard, Banknote, ArrowLeftRight, Bell, ScrollText, Settings, Search } from "lucide-react";
+import { LayoutDashboard, Users, ShieldCheck, CreditCard, Banknote, ArrowLeftRight, Bell, ScrollText, Settings, Search, BadgeCheck } from "lucide-react";
 import { AppShell, StatusPill } from "@addiscard/ui";
 import { adminService } from "@addiscard/services";
 import { useAuth } from "../context/AuthContext";
@@ -24,6 +24,7 @@ const NAV_ITEMS = [
   { label: "KYC verification", to: "/kyc", icon: ShieldCheck },
   { label: "Payments", to: "/payments", icon: Banknote },
   { label: "Transactions", to: "/transactions", icon: ArrowLeftRight },
+  { label: "Card issuance", to: "/card-issuance", icon: BadgeCheck },
   { label: "Card operations", to: "/cards", icon: CreditCard },
   { label: "Notifications", to: "/notifications", icon: Bell },
   { label: "Audit logs", to: "/audit", icon: ScrollText },
