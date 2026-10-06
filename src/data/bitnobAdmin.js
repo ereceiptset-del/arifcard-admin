@@ -39,7 +39,7 @@ export const ISSUANCE_BLOCKER_LABEL = {
   PAYMENT_NOT_VERIFIED: "Payment not verified",
   BITNOB_KYC_REQUIRED: "Provider KYC required",
   CARD_ALREADY_EXISTS: "Card already exists",
-  INSUFFICIENT_SANDBOX_FUNDS: "Sandbox provider test balance is insufficient",
+  INSUFFICIENT_PROVIDER_FUNDS: "Provider funding balance is insufficient",
   FUNDING_SOURCE_UNCONFIRMED: "Provider funding balance not confirmed",
   FUNDING_CHECK_FAILED: "Provider balance could not be read",
   PROVIDER_NOT_AVAILABLE_HERE: "This server cannot call the provider",
