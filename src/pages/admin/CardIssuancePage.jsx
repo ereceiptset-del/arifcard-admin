@@ -3,6 +3,8 @@ import { CreditCard, Send, RefreshCw } from "lucide-react";
 import { Panel, PageHeader, Table, StatusPill, Button, Dialog, Skeleton, ErrorState, EmptyState, useToast, formatDateTime } from "@addiscard/ui";
 import { ApiError } from "@addiscard/services";
 import { useAsync } from "../../hooks/useAsync.js";
+import { usePage, pageRows } from "../../hooks/usePage.js";
+import { PageNav } from "../../components/admin/PageNav.jsx";
 import { bitnobAdmin, ISSUANCE_LABEL, ISSUANCE_BLOCKER_LABEL } from "../../data/bitnobAdmin.js";
 
 /**
@@ -42,22 +44,28 @@ export default function CardIssuancePage() {
       />
       {loading && !data && <Skeleton className="h-64 w-full rounded-panel" />}
       {error && !data && <ErrorState title="We couldn't load card issuance" error={error} onRetry={reload} />}
-      {data &&
-        SECTIONS.map((section) => {
-          const list = rows.filter((r) => section.states.includes(r.state));
-          return (
-            <Panel key={section.key} title={`${section.title} (${list.length})`} padded={list.length === 0}>
-              {list.length === 0 ? (
-                <EmptyState compact icon={CreditCard} title={section.empty} />
-              ) : (
-                <Table caption={section.title} columns={columns(section.key, setConfirm)} rows={list.map((r) => ({ ...r, id: r.uid }))} />
-              )}
-            </Panel>
-          );
-        })}
+      {data && SECTIONS.map((section) => <IssuanceSection key={section.key} section={section} rows={rows.filter((r) => section.states.includes(r.state))} setConfirm={setConfirm} />)}
       <ConnectionPanel />
       {confirm && <IssueDialog row={confirm} settings={data} onClose={() => setConfirm(null)} onDone={reload} />}
     </div>
+  );
+}
+
+/** One queue section, paged on screen (the queue is read whole, newest state first). */
+function IssuanceSection({ section, rows, setConfirm }) {
+  const [page, setPage] = usePage(String(rows.length));
+  const { items, pagination } = pageRows(rows, page);
+  return (
+    <Panel title={`${section.title} (${rows.length})`} padded={rows.length === 0}>
+      {rows.length === 0 ? (
+        <EmptyState compact icon={CreditCard} title={section.empty} />
+      ) : (
+        <>
+          <Table caption={section.title} columns={columns(section.key, setConfirm)} rows={items.map((r) => ({ ...r, id: r.uid }))} />
+          <PageNav pagination={pagination} onPage={setPage} />
+        </>
+      )}
+    </Panel>
   );
 }
 

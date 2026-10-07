@@ -20,6 +20,9 @@ import {
 } from "@addiscard/ui";
 import { adminService, PAYMENT_STATUS_LABEL, PAYMENT_STATUS_TONE, ApiError } from "@addiscard/services";
 import { useAsync } from "../../hooks/useAsync.js";
+import { usePage } from "../../hooks/usePage.js";
+import { adminLists } from "../../data/adminLists.js";
+import { PageNav } from "../../components/admin/PageNav.jsx";
 
 /**
  * Payments, for staff.
@@ -84,8 +87,9 @@ export default function PaymentsPage() {
   };
 
   const [openId, setOpenId] = useState(null);
-  const load = useCallback(() => adminService.paymentClaims({ status }), [status]);
-  const { data, error, loading, reload } = useAsync(load, [status]);
+  const [page, setPage] = usePage(status);
+  const load = useCallback(() => adminLists.paymentClaims({ status, page }), [status, page]);
+  const { data, error, loading, reload } = useAsync(load, [status, page]);
   const claims = data?.claims || [];
 
   const columns = [
@@ -171,6 +175,7 @@ export default function PaymentsPage() {
           <EmptyState headingLevel={2} icon={Banknote} title="No claims to show" description="Receipts customers submit appear here, whatever the outcome." />
         )}
         {!loading && !error && claims.length > 0 && <Table caption="Payment claims" columns={columns} rows={claims} onRowClick={(row) => setOpenId(row.id)} />}
+        {!error && <PageNav pagination={data?.pagination} onPage={setPage} loading={loading} />}
       </Panel>
 
       <ClaimReview claimId={openId} onClose={() => setOpenId(null)} onChanged={reload} />

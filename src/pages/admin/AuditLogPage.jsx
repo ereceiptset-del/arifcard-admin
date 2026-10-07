@@ -1,8 +1,10 @@
 import { useCallback, useState } from "react";
 import { ScrollText } from "lucide-react";
 import { Panel, PageHeader, Table, StatusPill, Drawer, ErrorState, EmptyState, Skeleton, formatDateTime } from "@addiscard/ui";
-import { adminService } from "@addiscard/services";
 import { useAsync } from "../../hooks/useAsync.js";
+import { usePage } from "../../hooks/usePage.js";
+import { adminLists } from "../../data/adminLists.js";
+import { PageNav } from "../../components/admin/PageNav.jsx";
 
 /**
  * The audit trail.
@@ -59,8 +61,9 @@ const FIELD_LABEL = {
 export default function AuditLogPage() {
   const [action, setAction] = useState("all");
   const [open, setOpen] = useState(null);
-  const load = useCallback(() => adminService.auditLog({ action }), [action]);
-  const { data, error, loading, reload } = useAsync(load, [action]);
+  const [page, setPage] = usePage(action);
+  const load = useCallback(() => adminLists.auditLog({ action, page }), [action, page]);
+  const { data, error, loading, reload } = useAsync(load, [action, page]);
   const entries = data?.entries || [];
 
   const columns = [
@@ -99,7 +102,7 @@ export default function AuditLogPage() {
             ))}
           </select>
         </div>
-        <p className="pb-3 text-caption text-ink-muted">The 100 most recent entries for the chosen action.</p>
+        <p className="pb-3 text-caption text-ink-muted">Newest first, for the chosen action.</p>
       </div>
 
       <Panel padded={false}>
@@ -118,6 +121,7 @@ export default function AuditLogPage() {
           <EmptyState headingLevel={2} icon={ScrollText} title="Nothing recorded yet" description="Decisions, ownership changes and other sensitive actions appear here as they happen." />
         )}
         {!loading && !error && entries.length > 0 && <Table caption="Audit entries" columns={columns} rows={entries} onRowClick={setOpen} />}
+        {!error && <PageNav pagination={data?.pagination} onPage={setPage} loading={loading} />}
       </Panel>
 
       {open && (

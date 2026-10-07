@@ -3,6 +3,9 @@ import { Bell, RefreshCw } from "lucide-react";
 import { Panel, PageHeader, Table, StatusPill, Button, Dialog, ErrorState, EmptyState, Skeleton, useToast, formatDateTime } from "@addiscard/ui";
 import { adminService, ApiError } from "@addiscard/services";
 import { useAsync } from "../../hooks/useAsync.js";
+import { usePage } from "../../hooks/usePage.js";
+import { adminLists } from "../../data/adminLists.js";
+import { PageNav } from "../../components/admin/PageNav.jsx";
 
 /**
  * Outbound email jobs.
@@ -34,11 +37,19 @@ export default function NotificationsPage() {
   const [busyId, setBusyId] = useState(null);
   const [filter, setFilter] = useState("all");
   const [confirming, setConfirming] = useState(null);
-  const load = useCallback(() => adminService.notificationJobs(), []);
-  const { data, error, loading, reload } = useAsync(load, []);
-  const jobs = data?.jobs || [];
-  const shown = filter === "all" ? jobs : jobs.filter((job) => job.status === filter);
-  const failedCount = jobs.filter((job) => job.status === "failed").length;
+  const [page, setPage] = usePage(filter);
+  // The status filter and the page are applied on the server; the failed
+  // count comes from the server's total, not from the page on screen.
+  const load = useCallback(async () => {
+    const [list, failed] = await Promise.all([
+      adminLists.notificationJobs({ status: filter, page }),
+      filter === "failed" ? null : adminLists.notificationJobs({ status: "failed", page: 1 }),
+    ]);
+    return { ...list, failedTotal: (failed || list).pagination?.total ?? 0 };
+  }, [filter, page]);
+  const { data, error, loading, reload } = useAsync(load, [filter, page]);
+  const shown = data?.jobs || [];
+  const failedCount = data?.failedTotal || 0;
 
   async function retry(job) {
     setBusyId(job.id);
@@ -131,7 +142,7 @@ export default function NotificationsPage() {
         ))}
       </div>
 
-      <Panel padded={false} title="Recent emails" description="The 50 most recent jobs.">
+      <Panel padded={false} title="Recent emails" description="Newest first.">
         {loading && (
           <div aria-busy="true" className="flex flex-col gap-2 px-4 pb-4 sm:px-6">
             <Skeleton className="h-12 w-full" />
@@ -147,6 +158,7 @@ export default function NotificationsPage() {
           <EmptyState compact icon={Bell} title={filter === "all" ? "No emails yet" : "None with this status"} description="A job appears each time a decision or payment result is emailed to a customer." />
         )}
         {!loading && !error && shown.length > 0 && <Table caption="Email jobs" columns={columns} rows={shown} />}
+        {!error && <PageNav pagination={data?.pagination} onPage={setPage} loading={loading} />}
       </Panel>
 
       <Dialog

@@ -2,8 +2,11 @@ import { useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { Search, ShieldCheck } from "lucide-react";
 import { Panel, PageHeader, Table, StatusPill, Skeleton, ErrorState, EmptyState, Button, timeAgo, formatDateTime } from "@addiscard/ui";
-import { adminService, KYC_STATUS, KYC_STATUS_LABEL, KYC_STATUS_TONE, KYC_METHOD_LABEL } from "@addiscard/services";
+import { KYC_STATUS, KYC_STATUS_LABEL, KYC_STATUS_TONE, KYC_METHOD_LABEL } from "@addiscard/services";
 import { useAsync } from "../../hooks/useAsync.js";
+import { usePage } from "../../hooks/usePage.js";
+import { adminLists } from "../../data/adminLists.js";
+import { PageNav } from "../../components/admin/PageNav.jsx";
 
 const FILTERS = [
   { value: "all", label: "All" },
@@ -28,7 +31,8 @@ export default function KycQueuePage() {
   const q = searchParams.get("q") || "";
   const [query, setQuery] = useState(q);
 
-  const { data, error, loading, reload } = useAsync(() => adminService.kycCases({ status, q: q || undefined }), [status, q]);
+  const [page, setPage] = usePage(`${status}|${q}`);
+  const { data, error, loading, reload } = useAsync(() => adminLists.kycCases({ status, q: q || undefined, page }), [status, q, page]);
 
   const update = (key, value) => {
     const next = new URLSearchParams(searchParams);
@@ -142,6 +146,7 @@ export default function KycQueuePage() {
             )}
           </>
         )}
+        {!error && <PageNav pagination={data?.pagination} onPage={setPage} loading={loading} />}
       </Panel>
     </div>
   );

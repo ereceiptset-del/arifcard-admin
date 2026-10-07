@@ -15,6 +15,9 @@ import {
   KYC_METHOD_LABEL,
 } from "@addiscard/services";
 import { useAsync } from "../../hooks/useAsync.js";
+import { usePage } from "../../hooks/usePage.js";
+import { adminLists } from "../../data/adminLists.js";
+import { PageNav } from "../../components/admin/PageNav.jsx";
 // CODEGO DISABLED (owner decision, 2026-10-02): card issuing moves to Bitnob.
 // import IssuerFunding from "../../components/admin/IssuerFunding.jsx";
 // import IssuerCardOrders from "../../components/admin/IssuerCardOrders.jsx";
@@ -60,8 +63,9 @@ export default function CustomersPage() {
   // Follow the header search when it changes the URL while this page is open.
   useEffect(() => setQuery(q), [q]);
 
-  const load = useCallback(() => adminService.customers({ q, kycStatus }), [q, kycStatus]);
-  const { data, error, loading, reload } = useAsync(load, [q, kycStatus]);
+  const [page, setPage] = usePage(`${q}|${kycStatus}`);
+  const load = useCallback(() => adminLists.customers({ q, kycStatus, page }), [q, kycStatus, page]);
+  const { data, error, loading, reload } = useAsync(load, [q, kycStatus, page]);
   const rows = data?.customers || [];
 
   const update = (key, value) => {
@@ -172,6 +176,7 @@ export default function CustomersPage() {
           />
         )}
         {!loading && !error && rows.length > 0 && <Table caption="Customers" keyField="uid" columns={columns} rows={rows} onRowClick={(row) => setOpenUid(row.uid)} />}
+        {!error && <PageNav pagination={data?.pagination} onPage={setPage} loading={loading} />}
       </Panel>
 
       {data?.truncated && (

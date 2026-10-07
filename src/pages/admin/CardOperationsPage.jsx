@@ -19,6 +19,9 @@ import {
 } from "@addiscard/ui";
 import { ApiError } from "@addiscard/services";
 import { useAsync } from "../../hooks/useAsync.js";
+import { usePage, pageRows } from "../../hooks/usePage.js";
+import { adminLists } from "../../data/adminLists.js";
+import { PageNav } from "../../components/admin/PageNav.jsx";
 import { providerOps, OPERATION_LABEL, OPERATION_TONE, EVENT_LABEL, EVENT_TONE } from "../../data/providerOps.js";
 import { bitnobAdmin, ATTENTION_LABEL } from "../../data/bitnobAdmin.js";
 
@@ -92,7 +95,9 @@ function FilterChips({ label, values, value, onChange, labels }) {
 function BitnobAttention() {
   const load = useCallback(() => bitnobAdmin.attention(), []);
   const { data, error, loading, reload } = useAsync(load, []);
-  const rows = (data?.items || []).map((item, i) => ({ ...item, id: `${item.kind}-${item.uid || "?"}-${i}` }));
+  const all = (data?.items || []).map((item, i) => ({ ...item, id: `${item.kind}-${item.uid || "?"}-${i}` }));
+  const [page, setPage] = usePage(String(all.length));
+  const { items: rows, pagination } = pageRows(all, page);
   const columns = [
     { key: "kind", header: "Needs", render: (r) => ATTENTION_LABEL[r.kind] || r.kind },
     { key: "status", header: "Status", render: (r) => <StatusPill tone={r.kind === "top_up_requested" ? "info" : "warning"}>{r.status}</StatusPill> },
@@ -120,6 +125,7 @@ function BitnobAttention() {
       )}
       {!loading && !error && rows.length === 0 && <EmptyState compact icon={Workflow} title="Nothing needs attention" description="Unresolved submissions, card changes and top-up requests appear here." />}
       {!loading && !error && rows.length > 0 && <Table caption="Card provider items needing attention" columns={columns} rows={rows} />}
+      {!error && <PageNav pagination={pagination} onPage={setPage} />}
     </Panel>
   );
 }
@@ -127,8 +133,9 @@ function BitnobAttention() {
 function Operations() {
   const [status, setStatus] = useState("all");
   const [open, setOpen] = useState(null);
-  const load = useCallback(() => providerOps.operations(status), [status]);
-  const { data, error, loading, reload } = useAsync(load, [status]);
+  const [page, setPage] = usePage(status);
+  const load = useCallback(() => adminLists.operations({ status, page }), [status, page]);
+  const { data, error, loading, reload } = useAsync(load, [status, page]);
   const rows = data?.operations || [];
 
   const columns = [
@@ -149,7 +156,7 @@ function Operations() {
   ];
 
   return (
-    <Panel title="Issuer operations" description="Newest first, up to 100." padded={false}>
+    <Panel title="Issuer operations" description="Newest first." padded={false}>
       <div className="px-4 pb-3 sm:px-6">
         <FilterChips label="Operation status" values={OPERATION_FILTERS} value={status} onChange={setStatus} labels={OPERATION_LABEL} />
       </div>
@@ -168,6 +175,7 @@ function Operations() {
         <EmptyState compact icon={Workflow} title="No operations" description={status === "all" ? "Requests to the card issuer appear here once customers order cards." : "None with this status."} />
       )}
       {!loading && !error && rows.length > 0 && <Table caption="Issuer operations" columns={columns} rows={rows} onRowClick={setOpen} />}
+      {!error && <PageNav pagination={data?.pagination} onPage={setPage} loading={loading} />}
       {open && (
         <OperationDrawer
           op={open}
@@ -285,8 +293,9 @@ function Events() {
   const [status, setStatus] = useState("all");
   const [open, setOpen] = useState(null);
   const [busy, setBusy] = useState(false);
-  const load = useCallback(() => providerOps.events(status), [status]);
-  const { data, error, loading, reload } = useAsync(load, [status]);
+  const [page, setPage] = usePage(status);
+  const load = useCallback(() => adminLists.events({ status, page }), [status, page]);
+  const { data, error, loading, reload } = useAsync(load, [status, page]);
   const rows = data?.events || [];
 
   const reprocess = async (ev) => {
@@ -329,7 +338,7 @@ function Events() {
   ];
 
   return (
-    <Panel title="Issuer events" description="What the issuer sent us. Field names only, never the data. Newest first, up to 100." padded={false}>
+    <Panel title="Issuer events" description="What the issuer sent us. Field names only, never the data. Newest first." padded={false}>
       <div className="px-4 pb-3 sm:px-6">
         <FilterChips label="Event status" values={EVENT_FILTERS} value={status} onChange={setStatus} labels={EVENT_LABEL} />
       </div>
@@ -348,6 +357,7 @@ function Events() {
         <EmptyState compact icon={Webhook} title="No events" description={status === "all" ? "Events from the card issuer appear here as they arrive." : "None with this status."} />
       )}
       {!loading && !error && rows.length > 0 && <Table caption="Issuer events" columns={columns} rows={rows} onRowClick={setOpen} />}
+      {!error && <PageNav pagination={data?.pagination} onPage={setPage} loading={loading} />}
 
       {open && (
         <Drawer
