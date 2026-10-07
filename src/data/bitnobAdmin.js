@@ -19,6 +19,8 @@ export const bitnobAdmin = {
   issuance: () => backendApi.get("/admin/bitnob/issuance", { auth: true }),
   /** Administrator: issue the card; the backend re-checks eligibility and funding. */
   issue: (uid) => backendApi.post(`/admin/bitnob/issuance/${encodeURIComponent(uid)}/issue`, {}, { auth: true }),
+  /** Administrator: read-only check that the backend this site uses can reach Bitnob. */
+  connectivity: () => backendApi.get("/admin/bitnob/connectivity", { auth: true }),
 };
 
 export const ISSUANCE_LABEL = {

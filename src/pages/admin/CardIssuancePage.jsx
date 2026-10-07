@@ -55,8 +55,60 @@ export default function CardIssuancePage() {
             </Panel>
           );
         })}
+      <ConnectionPanel />
       {confirm && <IssueDialog row={confirm} settings={data} onClose={() => setConfirm(null)} onDone={reload} />}
     </div>
+  );
+}
+
+/**
+ * Administrator: can THIS backend (the one this site talks to — local or
+ * deployed) reach the Bitnob API? Read-only: configured, source IP vs the
+ * allowlisted one, and a whoami. Run on the live site, it is the evidence
+ * for (or against) live Bitnob calls such as card details.
+ */
+function ConnectionPanel() {
+  const [busy, setBusy] = useState(false);
+  const [report, setReport] = useState(null);
+  const [problem, setProblem] = useState(null);
+  const run = async () => {
+    setBusy(true);
+    setProblem(null);
+    try {
+      setReport(await bitnobAdmin.connectivity());
+    } catch (e) {
+      setProblem(e instanceof ApiError ? e.message : "The check didn't go through.");
+    } finally {
+      setBusy(false);
+    }
+  };
+  const w = report?.whoami;
+  return (
+    <Panel
+      title="Bitnob connection"
+      description="Read-only check from the backend this site uses: is Bitnob set up there, which public IP it calls from, and does Bitnob accept it."
+      action={
+        <Button variant="secondary" size="sm" loading={busy} onClick={run}>
+          Check connection
+        </Button>
+      }
+    >
+      {problem && <p className="text-small text-danger">{problem}</p>}
+      {report && (
+        <dl className="divide-y divide-line rounded-control border border-line">
+          <Row label="Backend" value={report.runtime === "deployed" ? "Live (deployed)" : "Local (this computer)"} />
+          <Row label="Bitnob set up here" value={report.configured ? `Yes (${report.environment})` : `No — ${report.reason || "not configured"}`} />
+          <Row label="Calls Bitnob from IP" value={report.sourceIp?.currentIp || "Unknown"} />
+          <Row label="Allowlisted IP (setting)" value={report.allowlistedIp || "Not set"} />
+          <Row label="Matches" value={report.sourceIp?.matchesAllowlist ? "Yes" : "No"} />
+          <Row
+            label="Bitnob answer (whoami)"
+            value={!w ? "Not tried (not set up here)" : w.result === "SUCCESS" ? `Accepted — ${w.environment}` : `Refused — ${w.result}${w.code ? ` / ${w.code}` : ""}${w.status ? ` (HTTP ${w.status})` : ""}`}
+          />
+          <Row label="Checked" value={formatDateTime(report.checkedAt)} />
+        </dl>
+      )}
+    </Panel>
   );
 }
 
