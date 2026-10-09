@@ -86,4 +86,6 @@ export const ATTENTION_LABEL = {
   funding_ready: "Funding: ready to send",
   funding_unsettled: "Funding: not settled yet",
   funding_amount_mismatch: "Funding: amount differs",
+  sandbox_topup_unresolved: "Sandbox test top-up: not confirmed yet",
+  sandbox_topup_review_required: "Sandbox test top-up needs review",
 };

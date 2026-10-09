@@ -99,7 +99,17 @@ function BitnobAttention() {
   const [page, setPage] = usePage(String(all.length));
   const { items: rows, pagination } = pageRows(all, page);
   const columns = [
-    { key: "kind", header: "Needs", render: (r) => ATTENTION_LABEL[r.kind] || r.kind },
+    {
+      key: "kind",
+      header: "Needs",
+      render: (r) => (
+        <span className="flex flex-wrap items-center gap-2">
+          {ATTENTION_LABEL[r.kind] || r.kind}
+          {/* Outcome unknown at the provider: settle by reading it, never by sending again. */}
+          {r.reconcile && <StatusPill tone="attention">Reconciliation required</StatusPill>}
+        </span>
+      ),
+    },
     { key: "status", header: "Status", render: (r) => <StatusPill tone={r.kind === "top_up_requested" ? "info" : "warning"}>{r.status}</StatusPill> },
     { key: "uid", header: "Customer", hideBelow: "md", render: (r) => <span className="break-all text-caption">{r.uid || "Not recorded"}</span> },
     {

@@ -21,7 +21,9 @@ const SECTIONS = [
   { key: "ready", title: "Ready for card issuance", states: ["ready_for_issuance"], empty: "Customers appear here once they are verified and their payment is verified." },
   { key: "provisioning", title: "Provisioning", states: ["provisioning"], empty: "No cards are being created." },
   { key: "active", title: "Active cards", states: ["active"], empty: "No active cards yet." },
-  { key: "attention", title: "Needs attention", states: ["blocked", "failed", "unknown"], empty: "Nothing needs attention." },
+  { key: "attention", title: "Needs attention", states: ["blocked", "failed"], empty: "Nothing needs attention." },
+  // The provider's outcome is not known: settled by reading (or the signed event), never by issuing again.
+  { key: "reconcile", title: "Reconciliation required", states: ["unknown"], empty: "No unknown outcomes." },
   { key: "waiting", title: "Not ready yet", states: ["awaiting_payment", "not_eligible"], empty: "No customers are waiting." },
 ];
 
@@ -44,7 +46,12 @@ export default function CardIssuancePage() {
       />
       {loading && !data && <Skeleton className="h-64 w-full rounded-panel" />}
       {error && !data && <ErrorState title="We couldn't load card issuance" error={error} onRetry={reload} />}
-      {data && SECTIONS.map((section) => <IssuanceSection key={section.key} section={section} rows={rows.filter((r) => section.states.includes(r.state))} setConfirm={setConfirm} />)}
+      {data?.provider && !data.provider.available && (
+        <p role="status" className="rounded-control border border-line bg-surface-2 px-4 py-3 text-small text-ink">
+          Issuing is unavailable from this backend ({data.provider.runtime === "deployed" ? "live" : "local"}): {data.provider.message} Nothing can be sent to the card provider from here; use the allowlisted backend.
+        </p>
+      )}
+      {data && SECTIONS.map((section) => <IssuanceSection key={section.key} section={section} rows={rows.filter((r) => section.states.includes(r.state))} setConfirm={setConfirm} provider={data.provider} />)}
       <ConnectionPanel />
       {confirm && <IssueDialog row={confirm} settings={data} onClose={() => setConfirm(null)} onDone={reload} />}
     </div>
@@ -52,7 +59,7 @@ export default function CardIssuancePage() {
 }
 
 /** One queue section, paged on screen (the queue is read whole, newest state first). */
-function IssuanceSection({ section, rows, setConfirm }) {
+function IssuanceSection({ section, rows, setConfirm, provider }) {
   const [page, setPage] = usePage(String(rows.length));
   const { items, pagination } = pageRows(rows, page);
   return (
@@ -61,7 +68,7 @@ function IssuanceSection({ section, rows, setConfirm }) {
         <EmptyState compact icon={CreditCard} title={section.empty} />
       ) : (
         <>
-          <Table caption={section.title} columns={columns(section.key, setConfirm)} rows={items.map((r) => ({ ...r, id: r.uid }))} />
+          <Table caption={section.title} columns={columns(section.key, setConfirm, provider)} rows={items.map((r) => ({ ...r, id: r.uid }))} />
           <PageNav pagination={pagination} onPage={setPage} />
         </>
       )}
@@ -120,7 +127,9 @@ function ConnectionPanel() {
   );
 }
 
-function columns(section, setConfirm) {
+function columns(section, setConfirm, provider) {
+  // Display only: the backend re-checks on every issue. Older backends send no `provider`.
+  const unavailable = provider && !provider.available ? provider.message || "This backend can't reach the card provider." : null;
   const base = [
     {
       key: "customer",
@@ -162,7 +171,7 @@ function columns(section, setConfirm) {
       align: "right",
       render: (r) =>
         r.state === "ready_for_issuance" || r.state === "blocked" || (r.state === "failed" && r.retryable) ? (
-          <Button size="sm" icon={Send} variant={r.state === "ready_for_issuance" ? undefined : "secondary"} onClick={(event) => { event.stopPropagation(); setConfirm(r); }}>
+          <Button size="sm" icon={Send} variant={r.state === "ready_for_issuance" ? undefined : "secondary"} disabled={Boolean(unavailable)} disabledReason={unavailable || undefined} onClick={(event) => { event.stopPropagation(); setConfirm(r); }}>
             {r.state === "ready_for_issuance" ? "Issue card" : "Retry issue"}
           </Button>
         ) : null,

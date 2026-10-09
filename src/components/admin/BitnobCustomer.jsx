@@ -1,5 +1,5 @@
 import { useCallback, useState } from "react";
-import { StatusPill, ErrorState, Skeleton, Button, TextInput, useToast, formatDateTime, formatMoney } from "@addiscard/ui";
+import { StatusPill, ErrorState, Skeleton, Button, Dialog, TextInput, useToast, formatDateTime, formatMoney } from "@addiscard/ui";
 import { ApiError } from "@addiscard/services";
 import { useAsync } from "../../hooks/useAsync.js";
 import { bitnobAdmin, KYC_STATE, CARD_STATE } from "../../data/bitnobAdmin.js";
@@ -81,28 +81,104 @@ export default function BitnobCustomer({ uid }) {
           <h3 className="text-small font-semibold text-ink">Card history</h3>
           <ul className="mt-2 divide-y divide-line rounded-control border border-line">
             {data.cards.map((c) => (
-              <li key={c.id} className="flex flex-wrap items-center gap-x-3 gap-y-1 px-4 py-2.5 text-small">
-                <span className="min-w-0 flex-1 text-ink">Card {c.last4 ? `ending ${c.last4}` : "(no digits yet)"}{c.amountUsd ? ` · initial ${c.amountUsd} USD (sandbox)` : ""}</span>
+              <HistoryRow key={c.id} at={c.createdAt} detail={c.lastError ? `Provider: ${[c.lastError.code, c.lastError.status].filter(Boolean).join(" ")}` : c.reason || null}>
+                <span className="text-ink">Card {c.last4 ? `ending ${c.last4}` : "(no digits yet)"}{c.amountUsd ? ` · initial ${c.amountUsd} USD (sandbox)` : ""}</span>
                 <StatusPill tone={c.status === "active" ? "success" : c.status === "failed" ? "danger" : "warning"}>{c.status}</StatusPill>
                 {c.needsReview && <StatusPill tone="attention">Needs review</StatusPill>}
-              </li>
+              </HistoryRow>
             ))}
             {data.cardOperations.map((op) => (
-              <li key={op.id} className="flex flex-wrap items-center gap-x-3 px-4 py-2.5 text-small">
-                <span className="min-w-0 flex-1 text-ink">Set card {op.action}</span>
-                <StatusPill tone={op.status === "done" ? "success" : op.status === "failed" ? "danger" : "warning"}>{op.status}</StatusPill>
-              </li>
+              <HistoryRow
+                key={op.id}
+                at={op.createdAt}
+                detail={[op.settledBy === "provider_read" ? "settled by reading the card" : null, op.error ? `error ${[op.error.code, op.error.status].filter(Boolean).join(" ")}` : null].filter(Boolean).join(" · ") || null}
+              >
+                <span className="text-ink">{op.action === "frozen" ? "Freeze" : op.action === "active" ? "Unfreeze" : `Set ${op.action}`}</span>
+                <StatusPill tone={OP_TONE[op.status] || "warning"}>{OP_LABEL[op.status] || op.status}</StatusPill>
+              </HistoryRow>
             ))}
             {data.topUpRequests.map((t) => (
-              <li key={t.id} className="flex flex-wrap items-center gap-x-3 px-4 py-2.5 text-small">
-                <span className="min-w-0 flex-1 text-ink">Top-up request · {(t.amountCents / 100).toFixed(2)} {t.currency}</span>
+              <HistoryRow key={t.id} at={t.createdAt}>
+                <span className="text-ink">Customer top-up request · {(t.amountCents / 100).toFixed(2)} {t.currency}</span>
                 <StatusPill tone="info">{t.status}</StatusPill>
-              </li>
+              </HistoryRow>
+            ))}
+          </ul>
+        </section>
+      )}
+
+      {data.sandboxTopups?.length > 0 && (
+        <section>
+          <h3 className="text-small font-semibold text-ink">Sandbox test top-ups</h3>
+          <p className="mt-1 text-caption text-ink-muted">Operator-run lifecycle tests with test funds — not customer funding. Confirmed only by Bitnob (a read of the card or the signed event).</p>
+          <ul className="mt-2 divide-y divide-line rounded-control border border-line">
+            {data.sandboxTopups.map((t) => (
+              <HistoryRow
+                key={t.id}
+                at={t.createdAt}
+                detail={[
+                  t.feeUnits != null ? `fee ${units(t.feeUnits, t.unitsPerUsd)}` : null,
+                  `cap ${t.maxDebitUsd}.00`,
+                  t.companyDebitUnits != null ? `company debit ${units(t.companyDebitUnits, "1000000")} USDC` : null,
+                  t.confirmedBy ? `confirmed by ${t.confirmedBy === "provider_read" ? "card read" : "signed event"}` : null,
+                  t.error ? `refused: ${[t.error.code, t.error.status].filter(Boolean).join(" ")}` : null,
+                  t.reviewReason ? `review: ${t.reviewReason}` : null,
+                  t.resolution ? `resolved: ${t.resolution}` : null,
+                ]
+                  .filter(Boolean)
+                  .join(" · ")}
+              >
+                <span className="text-ink">Test top-up · {units(t.amountUnits, t.unitsPerUsd)} USD</span>
+                <StatusPill tone={t.status === "confirmed" ? "success" : t.status === "failed" ? "danger" : "warning"}>{t.status}</StatusPill>
+                {t.needsReview && <StatusPill tone="attention">Needs review</StatusPill>}
+              </HistoryRow>
+            ))}
+          </ul>
+        </section>
+      )}
+
+      {data.transactions?.length > 0 && (
+        <section>
+          <h3 className="text-small font-semibold text-ink">Card activity (signed provider events)</h3>
+          <ul className="mt-2 divide-y divide-line rounded-control border border-line">
+            {data.transactions.map((t) => (
+              <HistoryRow key={t.reference} at={t.occurredAt} detail={[t.chargedTo === "company_wallet" ? "charged to the company wallet" : null, t.reviewReason ? `review: ${t.reviewReason}` : null].filter(Boolean).join(" · ") || null}>
+                <span className="text-ink">
+                  {t.merchant || t.kind} · {t.amountUnits != null ? `${units(t.amountUnits, "1000000")} ${t.currency || ""}` : "amount not reported"}
+                </span>
+                <StatusPill tone={t.state === "settled" || t.state === "completed" ? "success" : t.state === "declined" ? "danger" : "neutral"}>{t.state}</StatusPill>
+                {t.needsReview && <StatusPill tone="attention">Needs review</StatusPill>}
+              </HistoryRow>
             ))}
           </ul>
         </section>
       )}
     </div>
+  );
+}
+
+const OP_LABEL = { sending: "Sending", unknown: "Outcome unknown — reconcile", done: "Done", not_applied: "Not applied", failed: "Refused" };
+const OP_TONE = { done: "success", failed: "danger", not_applied: "neutral", unknown: "attention" };
+
+/** Integer provider units → an exact two-decimal string (display only). */
+function units(value, perUsd) {
+  if (!/^-?\d{1,20}$/.test(String(value ?? "")) || !/^\d{1,12}$/.test(String(perUsd ?? ""))) return "?";
+  const per = BigInt(perUsd);
+  let u = BigInt(value);
+  const sign = u < 0n ? "-" : "";
+  if (u < 0n) u = -u;
+  return `${sign}${u / per}.${String(((u % per) * 100n) / per).padStart(2, "0")}`;
+}
+
+function HistoryRow({ at, detail, children }) {
+  return (
+    <li className="flex flex-col gap-1 px-4 py-2.5 text-small">
+      <span className="flex flex-wrap items-center gap-x-3 gap-y-1">
+        <span className="min-w-0 flex-1">{children[0] ?? children}</span>
+        {Array.isArray(children) ? children.slice(1) : null}
+      </span>
+      {(at || detail) && <span className="text-caption text-ink-muted">{[at ? formatDateTime(at) : null, detail].filter(Boolean).join(" · ")}</span>}
+    </li>
   );
 }
 
@@ -125,7 +201,11 @@ function Funding({ data, onChange }) {
   const toast = useToast();
   const [busy, setBusy] = useState(null);
   const [forms, setForms] = useState({});
-  const run = async (key, fn, ok) => {
+  // Every change is confirmed first (both are audited and cannot be undone here).
+  const [pending, setPending] = useState(null);
+  const run = (key, fn, ok, confirm) => setPending({ key, fn, ok, ...confirm });
+  const go = async () => {
+    const { key, fn, ok } = pending;
     setBusy(key);
     try {
       await fn();
@@ -135,6 +215,7 @@ function Funding({ data, onChange }) {
       toast.error(problem instanceof ApiError ? problem.message : "That didn't go through.");
     } finally {
       setBusy(null);
+      setPending(null);
     }
   };
   const form = (id) => forms[id] || { usdAmount: "", etbPerUsd: "", rateSource: "" };
@@ -152,7 +233,17 @@ function Funding({ data, onChange }) {
               <span className="min-w-0 flex-1 text-ink">
                 Verified payment {p.reference || p.id} · {p.verifiedAmountMinor != null ? formatMoney(p.verifiedAmountMinor, p.currency) : "amount not recorded"}
               </span>
-              <Button size="sm" variant="secondary" loading={busy === `alloc-${p.id}`} onClick={() => run(`alloc-${p.id}`, () => bitnobAdmin.allocate(p.id), "Linked to card funding.")}>
+              <Button
+                size="sm"
+                variant="secondary"
+                loading={busy === `alloc-${p.id}`}
+                onClick={() =>
+                  run(`alloc-${p.id}`, () => bitnobAdmin.allocate(p.id), "Linked to card funding.", {
+                    title: "Allocate this payment to card funding?",
+                    body: `Payment ${p.reference || p.id} (${p.verifiedAmountMinor != null ? formatMoney(p.verifiedAmountMinor, p.currency) : "amount not recorded"}) will be linked to this customer's card funding under rule ${data.fundingRule.version}. Nothing is sent to the card provider. A payment can be allocated only once.`,
+                  })
+                }
+              >
                 Allocate to card funding
               </Button>
             </li>
@@ -181,7 +272,16 @@ function Funding({ data, onChange }) {
                     <TextInput label="Agreed USD" inputMode="decimal" value={v.usdAmount} onChange={set(f.id, "usdAmount")} />
                     <TextInput label="ETB per USD" inputMode="decimal" value={v.etbPerUsd} onChange={set(f.id, "etbPerUsd")} />
                     <TextInput label="Rate source" value={v.rateSource} onChange={set(f.id, "rateSource")} />
-                    <Button size="sm" loading={busy === `usd-${f.id}`} onClick={() => run(`usd-${f.id}`, () => bitnobAdmin.recordUsd(f.id, v), "Agreed amount recorded.")}>
+                    <Button
+                      size="sm"
+                      loading={busy === `usd-${f.id}`}
+                      onClick={() =>
+                        run(`usd-${f.id}`, () => bitnobAdmin.recordUsd(f.id, v), "Agreed amount recorded.", {
+                          title: "Record the agreed USD amount?",
+                          body: `${v.usdAmount || "?"} USD at ${v.etbPerUsd || "?"} ETB/USD (source: ${v.rateSource || "?"}) for ${f.paymentReference || f.intentId}. Recorded exactly as entered and audited. Nothing is sent to the card provider.`,
+                        })
+                      }
+                    >
                       Record
                     </Button>
                   </div>
@@ -190,6 +290,25 @@ function Funding({ data, onChange }) {
             );
           })}
         </ul>
+      )}
+      {pending && (
+        <Dialog
+          open
+          onClose={busy ? () => {} : () => setPending(null)}
+          title={pending.title}
+          footer={
+            <div className="flex flex-wrap justify-end gap-2">
+              <Button variant="secondary" disabled={Boolean(busy)} onClick={() => setPending(null)}>
+                Cancel
+              </Button>
+              <Button loading={Boolean(busy)} onClick={go}>
+                Confirm
+              </Button>
+            </div>
+          }
+        >
+          <p className="text-small text-ink">{pending.body}</p>
+        </Dialog>
       )}
     </section>
   );
