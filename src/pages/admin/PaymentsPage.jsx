@@ -23,6 +23,7 @@ import { useAsync } from "../../hooks/useAsync.js";
 import { usePage } from "../../hooks/usePage.js";
 import { adminLists } from "../../data/adminLists.js";
 import { PageNav } from "../../components/admin/PageNav.jsx";
+import { diagnostics, RECEIPT_STAGE_LABEL } from "../../data/diagnostics.js";
 
 /**
  * Payments, for staff.
@@ -179,7 +180,80 @@ export default function PaymentsPage() {
       </Panel>
 
       <ClaimReview claimId={openId} onClose={() => setOpenId(null)} onChanged={reload} />
+      <ReceiptCheck />
     </div>
+  );
+}
+
+/**
+ * Administrator: what THIS backend (local or live) gets from the bank for one
+ * receipt code — read-only. No claim is created and no payment is decided.
+ * The code is sent to our backend only; the answer shows stages and field
+ * presence, never names, accounts, amounts or the code itself.
+ */
+function ReceiptCheck() {
+  const [method, setMethod] = useState("CBE");
+  const [token, setToken] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [report, setReport] = useState(null);
+  const [problem, setProblem] = useState(null);
+  const run = async () => {
+    setBusy(true);
+    setProblem(null);
+    setReport(null);
+    try {
+      setReport(await diagnostics.receipt({ method, token: token.trim() }));
+    } catch (e) {
+      setProblem(errorText(e, "The check didn't go through."));
+    } finally {
+      setBusy(false);
+    }
+  };
+  const p = report?.parser;
+  const rows = report
+    ? [
+        ["Result", RECEIPT_STAGE_LABEL[report.stage] || report.stage],
+        ["Backend", `${report.runtime === "deployed" ? "Live" : "Local"}${report.revision ? ` · ${report.revision}` : ""}`],
+        ["Checked", formatDateTime(report.utc)],
+        ["Bank host", report.destinationHost || "—"],
+        ["Code accepted / kept exactly", `${report.tokenAccepted ? "Yes" : "No"} / ${report.tokenPreserved ? "Yes" : "No"}`],
+        ["Answer received", report.httpResponseReceived ? `Yes — HTTP ${report.httpStatus}, ${report.contentType || "no type"}, ${report.bodyBytes} bytes, ${report.elapsedMs} ms` : `No${report.elapsedMs != null ? ` (after ${report.elapsedMs} ms)` : ""}`],
+        ...(report.errorCode ? [["Error", `${report.errorCode}${report.causes?.length ? ` (${report.causes.join(", ")})` : ""}`]] : []),
+        ...(p ? [["Receipt reader", `${p.outcome}${p.detail ? ` — ${p.detail}` : ""}${p.paymentStatus ? ` · status ${p.paymentStatus}` : ""}${p.currency ? ` · ${p.currency}` : ""}`]] : []),
+        ...(p?.fieldsPresent ? [["Fields present", Object.entries(p.fieldsPresent).filter(([, v]) => v).map(([k]) => k).join(", ") || "none"]] : []),
+        ["Reference", report.correlationId],
+      ]
+    : [];
+  return (
+    <Panel title="Receipt check (read-only)" description="Asks the bank about one receipt code from the backend this site uses, to see whether it can be reached and read. No payment is created or changed. Limited to a few checks per quarter hour.">
+      <div className="grid gap-3 sm:grid-cols-[160px_1fr_auto] sm:items-end">
+        <SelectInput
+          id="receipt-check-bank"
+          label="Bank"
+          value={method}
+          onChange={(e) => setMethod(e.target.value)}
+          options={[
+            { value: "CBE", label: "CBE" },
+            { value: "TELEBIRR", label: "telebirr" },
+          ]}
+        />
+        <TextInput label="Receipt code" autoComplete="off" spellCheck={false} value={token} onChange={(e) => setToken(e.target.value)} />
+        <Button loading={busy} disabled={!token.trim()} onClick={run}>
+          Check
+        </Button>
+      </div>
+      {problem && <p className="mt-3 text-small text-danger">{problem}</p>}
+      {report && (
+        <dl className="mt-4 divide-y divide-line rounded-control border border-line">
+          {rows.map(([label, value]) => (
+            <div key={label} className="grid grid-cols-[minmax(0,2fr)_minmax(0,3fr)] gap-4 px-4 py-2.5">
+              <dt className="text-small text-ink-muted">{label}</dt>
+              <dd className="min-w-0 break-words text-right text-small text-ink">{value}</dd>
+            </div>
+          ))}
+        </dl>
+      )}
+    </Panel>
   );
 }
 
