@@ -2,7 +2,7 @@ import { useCallback, useState } from "react";
 import { StatusPill, ErrorState, Skeleton, Button, Dialog, TextInput, useToast, formatDateTime, formatMoney } from "@addiscard/ui";
 import { ApiError } from "@addiscard/services";
 import { useAsync } from "../../hooks/useAsync.js";
-import { bitnobAdmin, KYC_STATE, CARD_STATE } from "../../data/bitnobAdmin.js";
+import { bitnobAdmin, KYC_STATE, CARD_STATE, FUNDING_STATUS } from "../../data/bitnobAdmin.js";
 
 /**
  * One customer's card-provider (Bitnob, sandbox) picture — read-only.
@@ -192,24 +192,33 @@ function Line({ label, value }) {
 }
 
 /**
- * The funding chain: verified ETB payment → allocation (rule, agreed USD,
- * rate basis) → Bitnob funding request → signed confirmation. Administrators
- * can link a payment and record the agreed USD amount (both audited); sending
- * to Bitnob is operator-run, and nothing here sets a balance.
+ * Card funding from an APPROVED USD instruction: verified payment → the USD
+ * amount an administrator approves for the card (no exchange rate, no
+ * conversion here) → one request to the card provider → the provider's
+ * confirmation. Every action is confirmed in a dialog and audited; the
+ * provider's fee is absorbed by the company and shown here only. Nothing here
+ * sets a balance.
  */
 function Funding({ data, onChange }) {
   const toast = useToast();
   const [busy, setBusy] = useState(null);
-  const [forms, setForms] = useState({});
-  // Every change is confirmed first (both are audited and cannot be undone here).
+  const [amounts, setAmounts] = useState({});
   const [pending, setPending] = useState(null);
-  const run = (key, fn, ok, confirm) => setPending({ key, fn, ok, ...confirm });
-  const go = async () => {
-    const { key, fn, ok } = pending;
+  const [reason, setReason] = useState("");
+  const rule = data.fundingRule;
+  const canSend = data.provider?.available !== false;
+  const ask = (p) => {
+    setReason("");
+    setPending(p);
+  };
+  const go = async (override) => {
+    const { key, done } = pending;
+    const fn = override || pending.fn;
     setBusy(key);
     try {
-      await fn();
-      toast.success(ok);
+      const result = await fn();
+      const [tone, message] = done(result);
+      toast[tone](message);
       onChange();
     } catch (problem) {
       toast.error(problem instanceof ApiError ? problem.message : "That didn't go through.");
@@ -218,72 +227,139 @@ function Funding({ data, onChange }) {
       setPending(null);
     }
   };
-  const form = (id) => forms[id] || { usdAmount: "", etbPerUsd: "", rateSource: "" };
-  const set = (id, key) => (event) => setForms((f) => ({ ...f, [id]: { ...form(id), [key]: event.target.value } }));
-  if (!data.funding.length && !data.verifiedPaymentsNotAllocated.length) return null;
+  if (!data.funding.length && !data.verifiedPaymentsNotInstructed.length) return null;
+  const usd = (cents) => formatMoney(cents, "USD");
 
   return (
     <section>
       <h3 className="text-small font-semibold text-ink">Card funding</h3>
-      <p className="mt-1 text-caption text-ink-muted">Rule {data.fundingRule.version}: {data.fundingRule.description}</p>
-      {data.verifiedPaymentsNotAllocated.length > 0 && (
+      <p className="mt-1 text-caption text-ink-muted">{rule.description} Sandbox: {usd(rule.minUsdCents)} to {usd(rule.maxUsdCents)} per instruction.</p>
+      {data.provider && !data.provider.available && <p className="mt-1 text-caption text-ink-muted">Sending is unavailable from this backend: {data.provider.message}</p>}
+
+      {data.verifiedPaymentsNotInstructed.length > 0 && (
         <ul className="mt-2 divide-y divide-line rounded-control border border-line">
-          {data.verifiedPaymentsNotAllocated.map((p) => (
-            <li key={p.id} className="flex flex-wrap items-center gap-x-3 gap-y-2 px-4 py-2.5 text-small">
-              <span className="min-w-0 flex-1 text-ink">
-                Verified payment {p.reference || p.id} · {p.verifiedAmountMinor != null ? formatMoney(p.verifiedAmountMinor, p.currency) : "amount not recorded"}
-              </span>
-              <Button
-                size="sm"
-                variant="secondary"
-                loading={busy === `alloc-${p.id}`}
-                onClick={() =>
-                  run(`alloc-${p.id}`, () => bitnobAdmin.allocate(p.id), "Linked to card funding.", {
-                    title: "Allocate this payment to card funding?",
-                    body: `Payment ${p.reference || p.id} (${p.verifiedAmountMinor != null ? formatMoney(p.verifiedAmountMinor, p.currency) : "amount not recorded"}) will be linked to this customer's card funding under rule ${data.fundingRule.version}. Nothing is sent to the card provider. A payment can be allocated only once.`,
-                  })
-                }
-              >
-                Allocate to card funding
-              </Button>
-            </li>
-          ))}
+          {data.verifiedPaymentsNotInstructed.map((p) => {
+            const amount = amounts[p.id] || "";
+            return (
+              <li key={p.id} className="flex flex-col gap-2 px-4 py-3 text-small">
+                <span className="text-ink">
+                  Verified payment {p.reference || p.id} · {p.verifiedAmountMinor != null ? formatMoney(p.verifiedAmountMinor, p.currency) : "amount not recorded"}
+                </span>
+                <div className="grid gap-2 sm:grid-cols-[1fr_auto] sm:items-end">
+                  <TextInput label="Approved USD for the card" hint="As approved upstream — never converted here." inputMode="decimal" value={amount} onChange={(e) => setAmounts((a) => ({ ...a, [p.id]: e.target.value }))} />
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    loading={busy === `approve-${p.id}`}
+                    disabled={!amount}
+                    onClick={() =>
+                      ask({
+                        key: `approve-${p.id}`,
+                        title: "Approve this card funding?",
+                        body: `${amount} USD for this customer's card, for payment ${p.reference || p.id}. Recorded exactly as entered and audited. Nothing is sent to the card provider yet. A payment can back only one instruction.`,
+                        fn: () => bitnobAdmin.approveFunding({ intentId: p.id, usdAmount: amount }),
+                        done: () => ["success", "Funding approved. Send it when ready."],
+                      })
+                    }
+                  >
+                    Approve funding
+                  </Button>
+                </div>
+              </li>
+            );
+          })}
         </ul>
       )}
+
       {data.funding.length > 0 && (
         <ul className="mt-2 divide-y divide-line rounded-control border border-line">
           {data.funding.map((f) => {
-            const editable = ["awaiting_usd_amount", "ready_to_fund"].includes(f.status);
-            const v = form(f.id);
+            const [tone, label] = FUNDING_STATUS[f.status] || ["neutral", f.status];
+            const o = f.operation;
+            const sendable = ["approved", "failed"].includes(f.status);
+            const checkable = o && ["pending", "unknown", "needs_review", "funded"].includes(f.status);
             return (
               <li key={f.id} className="flex flex-col gap-2 px-4 py-3 text-small">
                 <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
                   <span className="min-w-0 flex-1 text-ink">
-                    {f.paymentReference || f.intentId} · {formatMoney(f.etbReceivedMinor, "ETB")} received · fee {formatMoney(f.etbFeeMinor, "ETB")}
+                    {usd(f.usdCents)} for the card · payment {f.paymentReference || f.intentId}
                   </span>
-                  <StatusPill tone={f.status === "funded" ? "success" : f.status === "failed" ? "danger" : "warning"}>{f.status}</StatusPill>
+                  <StatusPill tone={tone}>{label}</StatusPill>
                 </div>
                 <span className="text-caption text-ink-muted">
-                  {f.usdCents != null ? `Agreed ${formatMoney(f.usdCents, "USD")} at ${f.rateBasis?.etbPerUsd} ETB/USD (${f.rateBasis?.source})` : "No agreed USD amount yet"}
-                  {f.operation ? ` · Bitnob request ${f.operation.status}${f.operation.needsReview ? ` — review: ${f.operation.reviewReason}` : ""}` : ""}
+                  {[
+                    `Approved by ${f.approvedBy || "?"}${f.approvedAt ? ` ${formatDateTime(f.approvedAt)}` : ""}`,
+                    f.note ? `note: ${f.note}` : null,
+                    f.attempts ? `${f.attempts} request${f.attempts > 1 ? "s" : ""} sent` : null,
+                    o?.feeUnits != null ? `provider fee ${units(o.feeUnits, o.unitsPerUsd)} USD (company)` : null,
+                    o?.confirmedBy ? `confirmed by ${o.confirmedBy === "provider_read" ? "provider read" : "signed event"}` : null,
+                    o?.cardBalanceDelta != null ? `card balance change ${units(o.cardBalanceDelta, o.unitsPerUsd)} USD` : null,
+                    f.lastError && f.status === "failed" ? `refused: ${f.lastError.message || f.lastError.code}` : null,
+                    o?.reviewReason ? `review: ${o.reviewReason}` : null,
+                    f.cancelReason ? `cancelled: ${f.cancelReason}` : null,
+                  ]
+                    .filter(Boolean)
+                    .join(" · ")}
                 </span>
-                {editable && (
-                  <div className="grid gap-2 sm:grid-cols-[1fr_1fr_2fr_auto] sm:items-end">
-                    <TextInput label="Agreed USD" inputMode="decimal" value={v.usdAmount} onChange={set(f.id, "usdAmount")} />
-                    <TextInput label="ETB per USD" inputMode="decimal" value={v.etbPerUsd} onChange={set(f.id, "etbPerUsd")} />
-                    <TextInput label="Rate source" value={v.rateSource} onChange={set(f.id, "rateSource")} />
-                    <Button
-                      size="sm"
-                      loading={busy === `usd-${f.id}`}
-                      onClick={() =>
-                        run(`usd-${f.id}`, () => bitnobAdmin.recordUsd(f.id, v), "Agreed amount recorded.", {
-                          title: "Record the agreed USD amount?",
-                          body: `${v.usdAmount || "?"} USD at ${v.etbPerUsd || "?"} ETB/USD (source: ${v.rateSource || "?"}) for ${f.paymentReference || f.intentId}. Recorded exactly as entered and audited. Nothing is sent to the card provider.`,
-                        })
-                      }
-                    >
-                      Record
-                    </Button>
+                {(sendable || checkable) && (
+                  <div className="flex flex-wrap gap-2">
+                    {sendable && (
+                      <Button
+                        size="sm"
+                        loading={busy === `send-${f.id}`}
+                        disabled={!canSend}
+                        disabledReason={canSend ? undefined : data.provider?.message}
+                        onClick={() =>
+                          ask({
+                            key: `send-${f.id}`,
+                            title: f.status === "failed" ? "Send this funding again?" : "Send this funding to the card provider?",
+                            body: `One request to fund the card with ${usd(f.usdCents)} from the company's test balance (the provider's fee, about 1.00 USD, is absorbed by the company). It is never retried automatically; the card is funded only when the provider confirms it.`,
+                            fn: () => bitnobAdmin.sendFunding(f.id),
+                            done: (r) => (r.sent ? (r.status === "pending" ? ["success", "Sent. Check with the provider to confirm it."] : r.status === "unknown" ? ["info", "No answer from the provider. Check with the provider before anything else."] : ["error", `Refused: ${r.error?.message || r.error?.code || "no reason given"}`]) : ["error", r.blocked || r.code]),
+                          })
+                        }
+                      >
+                        {f.status === "failed" ? "Send again" : "Send to card provider"}
+                      </Button>
+                    )}
+                    {checkable && (
+                      <Button
+                        size="sm"
+                        variant="secondary"
+                        loading={busy === `check-${f.id}`}
+                        onClick={() =>
+                          ask({
+                            key: `check-${f.id}`,
+                            title: "Check with the card provider?",
+                            body: "Reads the card's transactions and balance from the card provider (read-only). Nothing is sent.",
+                            fn: () => bitnobAdmin.confirmFunding(f.id),
+                            done: (r) => (r.confirmed ? ["success", `Confirmed: ${r.amount} USD added; card balance ${r.cardBalance ?? "?"} USD.`] : r.blocked ? ["info", r.blocked] : ["info", `Not confirmed yet (${r.status}).`]),
+                          })
+                        }
+                      >
+                        Check with provider
+                      </Button>
+                    )}
+                    {sendable && (
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        loading={busy === `cancel-${f.id}`}
+                        onClick={() =>
+                          ask({
+                            key: `cancel-${f.id}`,
+                            title: "Cancel this funding instruction?",
+                            body: "Nothing is open at the card provider for it. The instruction stays in the audit log.",
+                            needsReason: true,
+                            fn: null,
+                            id: f.id,
+                            done: () => ["success", "Instruction cancelled."],
+                          })
+                        }
+                      >
+                        Cancel instruction
+                      </Button>
+                    )}
                   </div>
                 )}
               </li>
@@ -299,15 +375,20 @@ function Funding({ data, onChange }) {
           footer={
             <div className="flex flex-wrap justify-end gap-2">
               <Button variant="secondary" disabled={Boolean(busy)} onClick={() => setPending(null)}>
-                Cancel
+                Back
               </Button>
-              <Button loading={Boolean(busy)} onClick={go}>
+              <Button
+                loading={Boolean(busy)}
+                disabled={pending.needsReason && reason.trim().length < 5}
+                onClick={() => go(pending.needsReason ? () => bitnobAdmin.cancelFunding(pending.id, reason.trim()) : undefined)}
+              >
                 Confirm
               </Button>
             </div>
           }
         >
           <p className="text-small text-ink">{pending.body}</p>
+          {pending.needsReason && <div className="mt-3"><TextInput label="Reason" value={reason} onChange={(e) => setReason(e.target.value)} /></div>}
         </Dialog>
       )}
     </section>

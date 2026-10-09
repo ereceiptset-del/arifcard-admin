@@ -11,16 +11,32 @@ import { backendApi } from "@addiscard/services";
 export const bitnobAdmin = {
   customer: (uid) => backendApi.get(`/admin/bitnob/customers/${encodeURIComponent(uid)}`, { auth: true }),
   attention: () => backendApi.get("/admin/bitnob/attention", { auth: true }),
-  /** Administrator, audited: link one verified ETB payment to card funding under the current rule. */
-  allocate: (intentId) => backendApi.post("/admin/bitnob/allocations", { intentId }, { auth: true }),
-  /** Administrator, audited: the agreed USD amount and its rate basis, as supplied (never computed). */
-  recordUsd: (id, body) => backendApi.post(`/admin/bitnob/allocations/${encodeURIComponent(id)}/usd`, body, { auth: true }),
+  /** Administrator, audited: approve a USD funding instruction for one verified payment (no conversion). */
+  approveFunding: (body) => backendApi.post("/admin/bitnob/funding-instructions", body, { auth: true }),
+  /** Administrator, audited: cancel an instruction nothing was sent for (or that the provider refused). */
+  cancelFunding: (id, reason) => backendApi.post(`/admin/bitnob/funding-instructions/${encodeURIComponent(id)}/cancel`, { reason }, { auth: true }),
+  /** Administrator, audited: send ONE funding request to the card provider (reserved first, never retried). */
+  sendFunding: (id) => backendApi.post(`/admin/bitnob/funding-instructions/${encodeURIComponent(id)}/send`, {}, { auth: true }),
+  /** Administrator: settle a sent instruction by reading the card provider (read-only). */
+  confirmFunding: (id) => backendApi.post(`/admin/bitnob/funding-instructions/${encodeURIComponent(id)}/confirm`, {}, { auth: true }),
   /** Card issuance queue (staff read). */
   issuance: () => backendApi.get("/admin/bitnob/issuance", { auth: true }),
   /** Administrator: issue the card; the backend re-checks eligibility and funding. */
   issue: (uid) => backendApi.post(`/admin/bitnob/issuance/${encodeURIComponent(uid)}/issue`, {}, { auth: true }),
   /** Administrator: read-only check that the backend this site uses can reach Bitnob. */
   connectivity: () => backendApi.get("/admin/bitnob/connectivity", { auth: true }),
+};
+
+/** Funding instruction statuses (backend funding.js). */
+export const FUNDING_STATUS = {
+  approved: ["info", "Approved — not sent"],
+  sending: ["warning", "Sending"],
+  pending: ["warning", "Sent — awaiting confirmation"],
+  funded: ["success", "Funded (confirmed)"],
+  failed: ["danger", "Refused"],
+  unknown: ["attention", "Outcome unknown — reconcile"],
+  needs_review: ["attention", "Needs review"],
+  cancelled: ["neutral", "Cancelled"],
 };
 
 export const ISSUANCE_LABEL = {
@@ -82,8 +98,10 @@ export const ATTENTION_LABEL = {
   card_operation_unresolved: "Card change unresolved",
   top_up_requested: "Top-up requested",
   transaction_review_required: "Card transaction needs review",
-  funding_awaiting_usd_amount: "Funding: agreed USD amount needed",
-  funding_ready: "Funding: ready to send",
+  funding_ready: "Funding: approved, ready to send",
+  funding_refused: "Funding: refused by the card provider",
+  funding_instruction_unknown: "Funding: outcome unknown",
+  funding_review_required: "Funding needs review",
   funding_unsettled: "Funding: not settled yet",
   funding_amount_mismatch: "Funding: amount differs",
   sandbox_topup_unresolved: "Sandbox test top-up: not confirmed yet",
