@@ -240,24 +240,31 @@ function Funding({ data, onChange }) {
         <ul className="mt-2 divide-y divide-line rounded-control border border-line">
           {data.verifiedPaymentsNotInstructed.map((p) => {
             const amount = amounts[p.id] || "";
+            const quoted = p.quotedUsdCents != null;
             return (
               <li key={p.id} className="flex flex-col gap-2 px-4 py-3 text-small">
                 <span className="text-ink">
                   Verified payment {p.reference || p.id} · {p.verifiedAmountMinor != null ? formatMoney(p.verifiedAmountMinor, p.currency) : "amount not recorded"}
+                  {quoted ? ` · priced top-up: ${usd(p.quotedUsdCents)} for the card` : ""}
                 </span>
                 <div className="grid gap-2 sm:grid-cols-[1fr_auto] sm:items-end">
-                  <TextInput label="Approved USD for the card" hint="As approved upstream — never converted here." inputMode="decimal" value={amount} onChange={(e) => setAmounts((a) => ({ ...a, [p.id]: e.target.value }))} />
+                  {/* A priced top-up's USD is the customer's quote; only an older payment needs an amount typed. */}
+                  {quoted ? (
+                    <p className="text-caption text-ink-muted">The amount comes from the customer&apos;s accepted quote and can&apos;t be changed.</p>
+                  ) : (
+                    <TextInput label="Approved USD for the card" hint="Older payment without a quote: as approved upstream." inputMode="decimal" value={amount} onChange={(e) => setAmounts((a) => ({ ...a, [p.id]: e.target.value }))} />
+                  )}
                   <Button
                     size="sm"
                     variant="secondary"
                     loading={busy === `approve-${p.id}`}
-                    disabled={!amount}
+                    disabled={!quoted && !amount}
                     onClick={() =>
                       ask({
                         key: `approve-${p.id}`,
                         title: "Approve this card funding?",
-                        body: `${amount} USD for this customer's card, for payment ${p.reference || p.id}. Recorded exactly as entered and audited. Nothing is sent to the card provider yet. A payment can back only one instruction.`,
-                        fn: () => bitnobAdmin.approveFunding({ intentId: p.id, usdAmount: amount }),
+                        body: `${quoted ? usd(p.quotedUsdCents) : `${amount} USD`} for this customer's card, for payment ${p.reference || p.id}. ${quoted ? "From the customer's quote." : "Recorded exactly as entered."} Audited. Nothing is sent to the card provider yet. A payment can back only one instruction.`,
+                        fn: () => bitnobAdmin.approveFunding(quoted ? { intentId: p.id } : { intentId: p.id, usdAmount: amount }),
                         done: () => ["success", "Funding approved. Send it when ready."],
                       })
                     }

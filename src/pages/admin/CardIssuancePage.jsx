@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { Fragment, useCallback, useState } from "react";
 import { CreditCard, Send, RefreshCw } from "lucide-react";
 import { Panel, PageHeader, Table, StatusPill, Button, Dialog, Skeleton, ErrorState, EmptyState, useToast, formatDateTime } from "@addiscard/ui";
 import { ApiError } from "@addiscard/services";
@@ -6,6 +6,7 @@ import { useAsync } from "../../hooks/useAsync.js";
 import { usePage, pageRows } from "../../hooks/usePage.js";
 import { PageNav } from "../../components/admin/PageNav.jsx";
 import { bitnobAdmin, ISSUANCE_LABEL, ISSUANCE_BLOCKER_LABEL } from "../../data/bitnobAdmin.js";
+import TopupRequests from "../../components/admin/TopupRequests.jsx";
 
 /**
  * Card issuance (admin-initiated).
@@ -51,7 +52,14 @@ export default function CardIssuancePage() {
           Issuing is unavailable from this backend ({data.provider.runtime === "deployed" ? "live" : "local"}): {data.provider.message} Nothing can be sent to the card provider from here; use the allowlisted backend.
         </p>
       )}
-      {data && SECTIONS.map((section) => <IssuanceSection key={section.key} section={section} rows={rows.filter((r) => section.states.includes(r.state))} setConfirm={setConfirm} provider={data.provider} />)}
+      {data &&
+        SECTIONS.map((section) => (
+          <Fragment key={section.key}>
+            <IssuanceSection section={section} rows={rows.filter((r) => section.states.includes(r.state))} setConfirm={setConfirm} provider={data.provider} />
+            {/* Its own card, right after "Ready for card issuance": top-ups are not issuance. */}
+            {section.key === "ready" && <TopupRequests />}
+          </Fragment>
+        ))}
       <ConnectionPanel />
       {confirm && <IssueDialog row={confirm} settings={data} onClose={() => setConfirm(null)} onDone={reload} />}
     </div>
@@ -224,7 +232,7 @@ function IssueDialog({ row, settings, onClose, onDone }) {
         <Row label="Provider" value="Bitnob" />
         <Row label="Environment" value={String(settings?.environment || "").toUpperCase()} />
         <Row label="Card type" value={settings?.cardType || "Standard virtual card"} />
-        <Row label="Initial amount" value={`${settings?.initialAmountUsd ?? "?"} USD (test funds)`} />
+        <Row label="Initial amount" value={row.cardAmountCents != null ? `${(row.cardAmountCents / 100).toFixed(2)} USD (from the customer's quote)` : `${settings?.initialAmountUsd ?? "?"} USD (test funds)`} />
         <Row label="Current status" value={(ISSUANCE_LABEL[row.state] || [])[1] || row.state} />
       </dl>
       {result && (

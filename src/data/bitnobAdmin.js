@@ -11,7 +11,7 @@ import { backendApi } from "@addiscard/services";
 export const bitnobAdmin = {
   customer: (uid) => backendApi.get(`/admin/bitnob/customers/${encodeURIComponent(uid)}`, { auth: true }),
   attention: () => backendApi.get("/admin/bitnob/attention", { auth: true }),
-  /** Administrator, audited: approve a USD funding instruction for one verified payment (no conversion). */
+  /** Administrator, audited: approve funding for one verified payment (a priced top-up uses its quoted USD; send `usdAmount` only for an older unpriced payment). */
   approveFunding: (body) => backendApi.post("/admin/bitnob/funding-instructions", body, { auth: true }),
   /** Administrator, audited: cancel an instruction nothing was sent for (or that the provider refused). */
   cancelFunding: (id, reason) => backendApi.post(`/admin/bitnob/funding-instructions/${encodeURIComponent(id)}/cancel`, { reason }, { auth: true }),
@@ -19,6 +19,8 @@ export const bitnobAdmin = {
   sendFunding: (id) => backendApi.post(`/admin/bitnob/funding-instructions/${encodeURIComponent(id)}/send`, {}, { auth: true }),
   /** Administrator: settle a sent instruction by reading the card provider (read-only). */
   confirmFunding: (id) => backendApi.post(`/admin/bitnob/funding-instructions/${encodeURIComponent(id)}/confirm`, {}, { auth: true }),
+  /** Card top-up requests: priced top-ups, their quotes and funding status (staff read). */
+  topupRequests: () => backendApi.get("/admin/bitnob/topup-requests", { auth: true }),
   /** Card issuance queue (staff read). */
   issuance: () => backendApi.get("/admin/bitnob/issuance", { auth: true }),
   /** Administrator: issue the card; the backend re-checks eligibility and funding. */

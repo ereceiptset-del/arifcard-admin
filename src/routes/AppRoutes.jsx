@@ -18,6 +18,7 @@ const CardOperationsPage = lazy(() => import("../pages/admin/CardOperationsPage"
 const CardIssuancePage = lazy(() => import("../pages/admin/CardIssuancePage"));
 const PaymentsPage = lazy(() => import("../pages/admin/PaymentsPage"));
 const SettingsPage = lazy(() => import("../pages/admin/SettingsPage"));
+const PricingPage = lazy(() => import("../pages/admin/PricingPage"));
 const TransactionsPage = lazy(() => import("../pages/admin/TransactionsPage"));
 const NotificationsPage = lazy(() => import("../pages/admin/NotificationsPage"));
 const AuditLogPage = lazy(() => import("../pages/admin/AuditLogPage"));
@@ -78,6 +79,7 @@ function AppRoutes() {
           <Route path="transactions" element={<TransactionsPage />} />
           <Route path="notifications" element={<NotificationsPage />} />
           <Route path="audit" element={<AuditLogPage />} />
+          <Route path="pricing" element={<PricingPage />} />
           <Route path="settings" element={<SettingsPage />} />
         </Route>
 
