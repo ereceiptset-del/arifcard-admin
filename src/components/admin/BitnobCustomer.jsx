@@ -147,6 +147,8 @@ export default function BitnobCustomer({ uid }) {
                   {t.merchant || t.kind} · {t.amountUnits != null ? `${units(t.amountUnits, "1000000")} ${t.currency || ""}` : "amount not reported"}
                 </span>
                 <StatusPill tone={t.state === "settled" || t.state === "completed" ? "success" : t.state === "declined" ? "danger" : "neutral"}>{t.state}</StatusPill>
+                {/* Bitnob sandbox "Simulate Webhook": genuine provider events, never a real purchase. */}
+                {t.simulated && <StatusPill tone="info">Sandbox simulation</StatusPill>}
                 {t.needsReview && <StatusPill tone="attention">Needs review</StatusPill>}
               </HistoryRow>
             ))}
