@@ -76,9 +76,19 @@ export default function TopupRequests() {
                   <Row label="Payment" value={`${r.reference || r.intentId}${r.createdAt ? ` · ${formatDateTime(r.createdAt)}` : ""}`} />
                   <Row label="Card credit" value={formatMoney(q.usdCents, "USD")} strong />
                   <Row label="Approved rate" value={q.etbPerUsd ? `${rateText(q.etbPerUsd)} ETB/USD` : "—"} />
-                  <Row label="Base ETB" value={formatMoney(q.baseEtbMinor, "ETB")} />
-                  <Row label="Arifcard customer fee" value={q.customerFeeType === "percentage" ? `${q.customerFeePercentage}% (policy ${q.pricingPolicyVersion})` : `policy ${q.pricingPolicyVersion}`} />
-                  <Row label="Customer fee amount" value={formatMoney(q.customerFeeEtbMinor, "ETB")} />
+                  {q.pricingModel === "deducted" ? (
+                    <>
+                      <Row label="Converted" value={formatMoney(q.convertedUsdCents, "USD")} />
+                      <Row label="Arifcard customer fee" value={q.customerFeeType === "percentage" ? `${q.customerFeePercentage}% (policy ${q.pricingPolicyVersion})` : `policy ${q.pricingPolicyVersion}`} />
+                      <Row label="Customer fee amount" value={`− ${formatMoney(q.customerFeeUsdCents, "USD")}`} />
+                    </>
+                  ) : (
+                    <>
+                      <Row label="Base ETB" value={formatMoney(q.baseEtbMinor, "ETB")} />
+                      <Row label="Arifcard customer fee" value={q.customerFeeType === "percentage" ? `${q.customerFeePercentage}% (policy ${q.pricingPolicyVersion})` : `policy ${q.pricingPolicyVersion}`} />
+                      <Row label="Customer fee amount" value={formatMoney(q.customerFeeEtbMinor, "ETB")} />
+                    </>
+                  )}
                   <Row label="Customer total payment" value={formatMoney(q.totalPayableEtbMinor, "ETB")} strong />
                   <Row label="Card provider fee (expected)" value={`${formatMoney(r.providerFeeEstimateCents, "USD")} · company cost`} />
                   <Row label="Provider wallet requirement" value={formatMoney(r.walletRequirementCents, "USD")} />

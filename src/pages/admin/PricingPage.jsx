@@ -73,7 +73,17 @@ export default function PricingPage() {
                 <div key={kind} className="flex items-center justify-between gap-3 px-4 py-3 sm:px-6">
                   <dt className="text-small text-ink-muted">{KIND_LABEL[kind] || kind}</dt>
                   <dd className="text-right text-small font-medium text-ink">
-                    {feeText(rule)} <span className="font-normal text-ink-muted">of the ETB base, in {policy.feeCurrency}</span>
+                    {policy.model === "deducted" ? (
+                      <>
+                        {feeText(rule)} <span className="font-normal text-ink-muted">of the converted payment</span>
+                        {rule.cardCreationFeeCents ? <> + {formatMoney(rule.cardCreationFeeCents, "USD")} <span className="font-normal text-ink-muted">card creation fee</span></> : null}
+                        <span className="font-normal text-ink-muted">, deducted</span>
+                      </>
+                    ) : (
+                      <>
+                        {feeText(rule)} <span className="font-normal text-ink-muted">of the ETB base, in {policy.feeCurrency}</span>
+                      </>
+                    )}
                   </dd>
                 </div>
               ))}
@@ -85,8 +95,10 @@ export default function PricingPage() {
               </div>
             </dl>
             <p className="border-t border-line px-4 py-3 text-caption text-ink-muted sm:px-6">
-              Total to pay = card amount × rate + this fee. The card always receives the full amount; the card provider&apos;s fees are the company&apos;s
-              cost. The fee changes only with a new policy version, not from this page. Quotes are held {data.quoteTtlMinutes} minutes. Sandbox
+              {policy?.model === "deducted"
+                ? "Card receives = what the customer pays, converted at the rate, − the service fee − the card creation fee (new card only). "
+                : "Total to pay = card amount × rate + this fee; the card receives the full amount. "}
+              The card provider&apos;s own fees are the company&apos;s cost. Fees change only with a new policy version, not from this page. Quotes are held {data.quoteTtlMinutes} minutes. Sandbox
               limits: top-up {formatMoney(data.limits?.TOPUP?.minCents, "USD")} to {formatMoney(data.limits?.TOPUP?.maxCents, "USD")}; new card{" "}
               {formatMoney(data.limits?.CARD_CREATION?.minCents, "USD")} to {formatMoney(data.limits?.CARD_CREATION?.maxCents, "USD")}, whole dollars.
             </p>
