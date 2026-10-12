@@ -99,8 +99,8 @@ export default function PricingPage() {
                 ? "Card receives = what the customer pays, converted at the rate, − the service fee − the card creation fee (new card only). "
                 : "Total to pay = card amount × rate + this fee; the card receives the full amount. "}
               The card provider&apos;s own fees are the company&apos;s cost. Fees change only with a new policy version, not from this page. Quotes are held {data.quoteTtlMinutes} minutes. Customer
-              minimums: top-up {formatMoney(data.limits?.TOPUP?.minCents, "USD")}; new card {formatMoney(data.limits?.CARD_CREATION?.minCents, "USD")}, whole
-              dollars. No maximum for customers; in the sandbox, funding above USD 50.00 and new cards above USD 10.00 are refused when you
+              minimums: top-up {formatMoney(data.limits?.TOPUP?.minCents, "USD")}; new card {formatMoney(data.limits?.CARD_CREATION?.minCents, "USD")}. The
+              customer pays exactly the birr they enter. No maximum for customers; in the sandbox, funding above USD 50.00 and new cards above USD 10.00 are refused when you
               approve or issue them.
             </p>
           </Panel>
