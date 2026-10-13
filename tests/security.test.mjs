@@ -82,6 +82,22 @@ test("card issuer actions go only to existing staff-protected admin endpoints", 
   for (const m of text.matchAll(/`(\/[^`$]+)/g)) assert.ok(m[1].startsWith("/admin/provider/"), `${m[1]} is outside /admin/provider`);
 });
 
+test("card issuance talks only to the staff-protected backend, never to the card provider", () => {
+  const data = read("src/data/bitnobAdmin.js");
+  for (const m of data.matchAll(/`(\/[^`$]+)|"(\/[^"]+)"/g)) {
+    const path = m[1] || m[2];
+    assert.ok(path.startsWith("/admin/bitnob/"), `${path} is outside /admin/bitnob`);
+  }
+  for (const file of ["src/components/admin/CardIssuanceReview.jsx", "src/pages/admin/CardIssuancePage.jsx"]) {
+    const text = code(read(file));
+    assert.ok(!/bitnob\.com|fetch\(|axios/i.test(text), `${file} must go through the backend`);
+    assert.ok(!/\b(cvv|cvc|cardNumber|fullNumber)\b/i.test(text), `${file} must not handle card secrets`);
+  }
+  // Issuing happens only from the explicit confirmation, behind the checkbox.
+  const review = code(read("src/components/admin/CardIssuanceReview.jsx"));
+  assert.equal((review.match(/bitnobAdmin\.issue\(/g) || []).length, 1, "exactly one issue call");
+});
+
 test("test tooling is never part of the production build", () => {
   const vite = read("vite.config.js");
   assert.ok(!/rollupOptions|input\s*:/.test(vite), "the build input stays the default index.html");

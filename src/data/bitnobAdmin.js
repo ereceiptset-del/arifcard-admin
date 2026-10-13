@@ -23,6 +23,8 @@ export const bitnobAdmin = {
   topupRequests: () => backendApi.get("/admin/bitnob/topup-requests", { auth: true }),
   /** Card issuance queue (staff read). */
   issuance: () => backendApi.get("/admin/bitnob/issuance", { auth: true }),
+  /** Administrator: everything to review before issuing one customer's card (read-only; nothing is sent). */
+  issuanceReview: (uid) => backendApi.get(`/admin/bitnob/issuance/${encodeURIComponent(uid)}/review`, { auth: true }),
   /** Administrator: issue the card; the backend re-checks eligibility and funding. */
   issue: (uid) => backendApi.post(`/admin/bitnob/issuance/${encodeURIComponent(uid)}/issue`, {}, { auth: true }),
   /** Administrator: read-only check that the backend this site uses can reach Bitnob. */

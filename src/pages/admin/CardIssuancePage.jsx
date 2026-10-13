@@ -1,22 +1,30 @@
 import { Fragment, useCallback, useState } from "react";
-import { CreditCard, Send, RefreshCw } from "lucide-react";
-import { Panel, PageHeader, Table, StatusPill, Button, Dialog, Skeleton, ErrorState, EmptyState, useToast, formatDateTime } from "@addiscard/ui";
+import { CreditCard, ClipboardCheck, RefreshCw } from "lucide-react";
+import { Panel, PageHeader, Table, StatusPill, Button, Skeleton, ErrorState, EmptyState, formatDateTime, formatMoney } from "@addiscard/ui";
 import { ApiError } from "@addiscard/services";
 import { useAsync } from "../../hooks/useAsync.js";
 import { usePage, pageRows } from "../../hooks/usePage.js";
 import { PageNav } from "../../components/admin/PageNav.jsx";
 import { bitnobAdmin, ISSUANCE_LABEL, ISSUANCE_BLOCKER_LABEL } from "../../data/bitnobAdmin.js";
 import TopupRequests from "../../components/admin/TopupRequests.jsx";
+import CardIssuanceReview from "../../components/admin/CardIssuanceReview.jsx";
+
+/** "robelamare75@gmail.com" → "robe••••@gmail.com" (the row needs to recognise, not to contact). */
+const maskEmail = (email) => {
+  const [local, domain] = String(email || "").split("@");
+  return local && domain ? `${local.slice(0, Math.min(4, Math.max(1, local.length - 2)))}••••@${domain}` : null;
+};
 
 /**
  * Card issuance (admin-initiated).
  *
  * Customers appear here automatically once the backend finds them verified
  * by staff, with complete card-provider details and consent, and a verified
- * payment — there is no customer request step. An administrator reviews and
- * confirms "Issue card"; the backend re-checks everything and calls the card
- * provider once. Nothing on this page decides eligibility, a balance or a
- * card state.
+ * payment — there is no customer request step. An administrator opens
+ * "Review Card Issuance" (the backend's checks, payment, pricing and card
+ * preview), confirms explicitly, and the backend re-checks everything and
+ * calls the card provider once. Nothing on this page decides eligibility, a
+ * balance or a card state.
  */
 const SECTIONS = [
   { key: "ready", title: "Ready for card issuance", states: ["ready_for_issuance"], empty: "Customers appear here once they are verified and their payment is verified." },
@@ -31,7 +39,7 @@ const SECTIONS = [
 export default function CardIssuancePage() {
   const load = useCallback(() => bitnobAdmin.issuance(), []);
   const { data, error, loading, reload } = useAsync(load, []);
-  const [confirm, setConfirm] = useState(null);
+  const [reviewing, setReviewing] = useState(null);
   const rows = data?.rows || [];
 
   return (
@@ -55,19 +63,19 @@ export default function CardIssuancePage() {
       {data &&
         SECTIONS.map((section) => (
           <Fragment key={section.key}>
-            <IssuanceSection section={section} rows={rows.filter((r) => section.states.includes(r.state))} setConfirm={setConfirm} provider={data.provider} />
+            <IssuanceSection section={section} rows={rows.filter((r) => section.states.includes(r.state))} setConfirm={setReviewing} />
             {/* Its own card, right after "Ready for card issuance": top-ups are not issuance. */}
             {section.key === "ready" && <TopupRequests />}
           </Fragment>
         ))}
       <ConnectionPanel />
-      {confirm && <IssueDialog row={confirm} settings={data} onClose={() => setConfirm(null)} onDone={reload} />}
+      {reviewing && <CardIssuanceReview uid={reviewing.uid} fallbackName={reviewing.name} onClose={() => setReviewing(null)} onChanged={reload} />}
     </div>
   );
 }
 
 /** One queue section, paged on screen (the queue is read whole, newest state first). */
-function IssuanceSection({ section, rows, setConfirm, provider }) {
+function IssuanceSection({ section, rows, setConfirm }) {
   const [page, setPage] = usePage(String(rows.length));
   const { items, pagination } = pageRows(rows, page);
   return (
@@ -76,7 +84,7 @@ function IssuanceSection({ section, rows, setConfirm, provider }) {
         <EmptyState compact icon={CreditCard} title={section.empty} />
       ) : (
         <>
-          <Table caption={section.title} columns={columns(section.key, setConfirm, provider)} rows={items.map((r) => ({ ...r, id: r.uid }))} />
+          <Table caption={section.title} columns={columns(section.key, setConfirm)} rows={items.map((r) => ({ ...r, id: r.uid }))} />
           <PageNav pagination={pagination} onPage={setPage} />
         </>
       )}
@@ -135,22 +143,38 @@ function ConnectionPanel() {
   );
 }
 
-function columns(section, setConfirm, provider) {
-  // Display only: the backend re-checks on every issue. Older backends send no `provider`.
-  const unavailable = provider && !provider.available ? provider.message || "This backend can't reach the card provider." : null;
-  const base = [
+function columns(section, setReview) {
+  return [
     {
       key: "customer",
       header: "Customer",
       render: (r) => (
         <span className="block min-w-0">
           <span className="block truncate">{r.name || "Name not recorded"}</span>
-          <span className="block truncate text-caption font-normal text-ink-muted">{r.email || r.uid}</span>
+          <span className="block truncate text-caption font-normal text-ink-muted">{maskEmail(r.email) || "Email not recorded"}</span>
         </span>
       ),
     },
     { key: "state", header: "Status", render: (r) => <StatusPill tone={(ISSUANCE_LABEL[r.state] || [])[0] || "neutral"}>{(ISSUANCE_LABEL[r.state] || [])[1] || r.state}</StatusPill> },
-    { key: "payment", header: "Payment", hideBelow: "md", render: (r) => (r.paymentReference ? `Verified · ${r.paymentReference}` : "Not verified") },
+    {
+      key: "payment",
+      header: "Payment",
+      hideBelow: "md",
+      render: (r) =>
+        r.paymentReference ? (
+          <span className="block min-w-0">
+            <span className="block truncate">
+              <StatusPill tone="success">Payment verified</StatusPill>
+            </span>
+            <span className="mt-1 block truncate text-caption font-normal text-ink-muted">
+              {r.paymentAmountMinor != null ? formatMoney(r.paymentAmountMinor, r.paymentCurrency || "ETB") : r.paymentReference}
+              {r.paymentVerifiedAt ? ` · Paid ${formatDateTime(r.paymentVerifiedAt)}` : ""}
+            </span>
+          </span>
+        ) : (
+          "Not verified"
+        ),
+    },
     {
       key: "detail",
       header: section === "ready" ? "Eligible since" : "Detail",
@@ -166,103 +190,29 @@ function columns(section, setConfirm, provider) {
               ? `Last issue: ${r.lastIssue.outcome}${r.lastIssue.code ? ` (${ISSUANCE_BLOCKER_LABEL[r.lastIssue.code] || r.lastIssue.code})` : ""}`
               : "—",
     },
-  ];
-  // A blocked attempt sent nothing; a refused one created nothing. Either can
-  // be retried deliberately (for example once test funds arrive); the backend
-  // re-checks everything and sends at most one request per retry.
-  if (section !== "ready" && section !== "attention") return base;
-  return [
-    ...base,
     {
       key: "action",
       header: "",
       align: "right",
+      // Every customer with a verified payment can be reviewed; issuing happens
+      // only after the review and an explicit confirmation (the backend decides).
       render: (r) =>
-        r.state === "ready_for_issuance" || r.state === "blocked" || (r.state === "failed" && r.retryable) ? (
-          <Button size="sm" icon={Send} variant={r.state === "ready_for_issuance" ? undefined : "secondary"} disabled={Boolean(unavailable)} disabledReason={unavailable || undefined} onClick={(event) => { event.stopPropagation(); setConfirm(r); }}>
-            {r.state === "ready_for_issuance" ? "Issue card" : "Retry issue"}
+        r.paymentReference || ["ready_for_issuance", "blocked", "failed", "unknown", "active"].includes(r.state) ? (
+          <Button
+            size="sm"
+            icon={ClipboardCheck}
+            variant={r.state === "ready_for_issuance" ? undefined : "secondary"}
+            onClick={(event) => {
+              event.stopPropagation();
+              setReview(r);
+            }}
+          >
+            Review Card Issuance
           </Button>
         ) : null,
     },
   ];
 }
-
-/** Explicit confirmation; the backend re-checks eligibility and funding before calling the provider. */
-function IssueDialog({ row, settings, onClose, onDone }) {
-  const toast = useToast();
-  const [busy, setBusy] = useState(false);
-  const [result, setResult] = useState(null);
-
-  const issue = async () => {
-    setBusy(true);
-    try {
-      const r = await bitnobAdmin.issue(row.uid);
-      setResult(r);
-      if (r.cardCreated) toast.success("The card is being created. It becomes active once the provider confirms it.", "Issuance sent");
-      onDone();
-    } catch (problem) {
-      setResult({ error: problem instanceof ApiError ? problem.message : "That didn't go through." , problems: problem?.problems || [] });
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  return (
-    <Dialog
-      open
-      onClose={onClose}
-      title="Issue virtual card"
-      description="Check the details, then confirm. The backend checks eligibility and test funding again before anything is sent."
-      footer={
-        <div className="flex flex-wrap justify-end gap-2">
-          <Button variant="secondary" onClick={onClose}>
-            {result ? "Close" : "Cancel"}
-          </Button>
-          {!result && (
-            <Button loading={busy} onClick={issue}>
-              Confirm {settings?.environment === "sandbox" ? "Sandbox " : ""}Card Issuance
-            </Button>
-          )}
-        </div>
-      }
-    >
-      <dl className="divide-y divide-line rounded-control border border-line">
-        <Row label="Customer" value={`${row.name || "Name not recorded"} · ${row.email || row.uid}`} />
-        <Row label="Payment" value={row.paymentReference ? `Verified · ${row.paymentReference}` : "Not verified"} />
-        <Row label="Provider" value="Bitnob" />
-        <Row label="Environment" value={String(settings?.environment || "").toUpperCase()} />
-        <Row label="Card type" value={settings?.cardType || "Standard virtual card"} />
-        <Row label="Initial amount" value={row.cardAmountCents != null ? `${(row.cardAmountCents / 100).toFixed(2)} USD (from the customer's quote)` : `${settings?.initialAmountUsd ?? "?"} USD (test funds)`} />
-        <Row label="Current status" value={(ISSUANCE_LABEL[row.state] || [])[1] || row.state} />
-      </dl>
-      {result && (
-        <div role="status" className="mt-4 text-small">
-          {result.error ? (
-            <>
-              <p className="text-danger">{result.error}</p>
-              {result.problems?.map((p) => (
-                <p key={p.code} className="mt-1 text-ink-soft">{p.message || ISSUANCE_BLOCKER_LABEL[p.code] || p.code}</p>
-              ))}
-            </>
-          ) : result.cardCreated ? (
-            <p className="text-ink">Sent. Status: {(ISSUANCE_LABEL[result.state] || [])[1] || result.state}. The card becomes active only when the provider confirms it.</p>
-          ) : result.state === "failed" ? (
-            <p className="text-ink">
-              The card provider refused the card{result.providerMessage ? `: ${result.providerMessage}` : ` (${result.code || "no reason given"})`}. Nothing was created; the customer can be issued again later.
-            </p>
-          ) : result.state === "unknown" ? (
-            <p className="text-ink">The card provider's answer did not arrive. Check the provider dashboard before trying again; nothing is retried automatically.</p>
-          ) : (
-            <p className="text-ink">
-              Card issuance blocked: {ISSUANCE_BLOCKER_LABEL[result.code] || result.blocked || result.code || result.state}. Nothing was created.
-            </p>
-          )}
-        </div>
-      )}
-    </Dialog>
-  );
-}
-
 function Row({ label, value }) {
   return (
     <div className="grid grid-cols-[minmax(0,2fr)_minmax(0,3fr)] items-center gap-4 px-4 py-2.5">

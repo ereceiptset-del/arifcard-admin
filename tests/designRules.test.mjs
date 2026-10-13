@@ -31,6 +31,8 @@ const REDESIGNED = [
   "src/pages/admin/SettingsPage.jsx",
   "src/components/admin/IssuerCardOrders.jsx",
   "src/components/admin/IssuerFunding.jsx",
+  "src/components/admin/CardIssuanceReview.jsx",
+  "src/pages/admin/CardIssuancePage.jsx",
   "src/data/providerOps.js",
   ...readdirSync(join(UI, "components")).map((file) => `packages/ui/src/components/${file}`),
   "packages/ui/src/layout/AppShell.jsx",
