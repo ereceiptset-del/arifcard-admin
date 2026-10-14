@@ -166,10 +166,11 @@ function columns(section, setReview) {
             <span className="block truncate">
               <StatusPill tone="success">Payment verified</StatusPill>
             </span>
-            <span className="mt-1 block truncate text-caption font-normal text-ink-muted">
+            {/* Two short lines, so the column stays narrow enough for tablets. */}
+            <span className="mt-1 block text-caption font-normal text-ink-muted">
               {r.paymentAmountMinor != null ? formatMoney(r.paymentAmountMinor, r.paymentCurrency || "ETB") : r.paymentReference}
-              {r.paymentVerifiedAt ? ` · Paid ${formatDateTime(r.paymentVerifiedAt)}` : ""}
             </span>
+            {r.paymentVerifiedAt && <span className="block text-caption font-normal text-ink-muted">Paid {formatDateTime(r.paymentVerifiedAt)}</span>}
           </span>
         ) : (
           "Not verified"

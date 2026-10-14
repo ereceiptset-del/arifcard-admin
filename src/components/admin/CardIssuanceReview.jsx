@@ -132,16 +132,16 @@ export default function CardIssuanceReview({ uid, fallbackName, onClose, onChang
   const footer =
     step === "review" ? (
       <div className="flex w-full flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <p id="issuance-action-reason" className="text-small text-ink-muted">
+        <p id="issuance-action-reason" className="min-w-0 flex-1 text-small text-ink-muted">
           {loading && !review
             ? "Loading the backend's checks…"
             : canIssue
               ? "Everything required has passed. You'll confirm once more before anything is sent."
               : blockedReasons.length
-                ? `Can't issue: ${blockedReasons[0].label.toLowerCase()} — ${blockedReasons[0].status}.`
+                ? `Can't issue: ${blockedReasons[0].detail || `${blockedReasons[0].label} — ${blockedReasons[0].status}.`}${blockedReasons.length > 1 ? ` (+${blockedReasons.length - 1} more above)` : ""}`
                 : "Card issuance is not available for this customer."}
         </p>
-        <div className="flex flex-wrap justify-end gap-2">
+        <div className="flex shrink-0 flex-wrap justify-end gap-2">
           <Button variant="secondary" onClick={onClose}>
             Cancel
           </Button>
@@ -211,7 +211,7 @@ function ReviewStep({ review: r }) {
       <div className="flex flex-wrap items-center gap-2">
         <EnvironmentBadge review={r} />
         <StatusPill tone={overall.tone}>{overall.label}</StatusPill>
-        <span className="text-caption text-ink-muted">Ref {r.customer.reference}</span>
+        {r.customer.reference && <span className="text-caption text-ink-muted">Payment {r.customer.reference}</span>}
       </div>
 
       {r.conflicts.existingCard && (
