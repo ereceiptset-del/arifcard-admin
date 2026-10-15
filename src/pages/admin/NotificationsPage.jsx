@@ -2,6 +2,7 @@ import { useCallback, useState } from "react";
 import { Bell, RefreshCw } from "lucide-react";
 import { Panel, PageHeader, Table, StatusPill, Button, Dialog, ErrorState, EmptyState, Skeleton, useToast, formatDateTime } from "@addiscard/ui";
 import { adminService, ApiError } from "@addiscard/services";
+import { useAuth } from "../../context/AuthContext";
 import { useAsync } from "../../hooks/useAsync.js";
 import { usePage } from "../../hooks/usePage.js";
 import { adminLists } from "../../data/adminLists.js";
@@ -17,23 +18,38 @@ import { PageNav } from "../../components/admin/PageNav.jsx";
  * everybody's time.
  *
  * Jobs carry no recipient address and no message body; a queue that did
- * would be a second copy of everyone's mail. Retry exists only for failed
- * jobs, through the existing protected endpoint.
+ * would be a second copy of everyone's mail. The masked address is the one
+ * the worker sent to. Temporary failures retry on their own; an
+ * administrator retries a failed or dead-lettered email through the
+ * protected endpoint — the email only, never the decision it describes.
  */
 
-const STATUS_LABEL = { pending: "Queued", processing: "Sending", sent: "Accepted by mail server", failed: "Failed" };
-const STATUS_TONE = { pending: "neutral", processing: "info", sent: "success", failed: "danger" };
+const STATUS_LABEL = {
+  pending: "Queued",
+  processing: "Sending",
+  sent: "Accepted by mail server",
+  retry_scheduled: "Retry scheduled",
+  failed: "Failed",
+  dead_letter: "Dead letter",
+};
+const STATUS_TONE = { pending: "neutral", processing: "info", sent: "success", retry_scheduled: "warning", failed: "danger", dead_letter: "attention" };
+const CATEGORY_LABEL = { TEMPORARY: "Temporary", PERMANENT: "Permanent", AMBIGUOUS: "Outcome unknown" };
 const TYPE_LABEL = {
   kyc_decision: "KYC decision",
   payment_verified: "Payment verified",
   payment_rejected: "Receipt not accepted",
   payment_requires_review: "Payment with our team",
   card_order_update: "Card order update",
+  bitnob_update: "Card provider update",
 };
-const FILTERS = ["all", "failed", "pending", "processing", "sent"];
+const FILTERS = ["all", "dead_letter", "failed", "retry_scheduled", "pending", "processing", "sent"];
+const RETRYABLE = new Set(["failed", "dead_letter"]);
 
 export default function NotificationsPage() {
   const toast = useToast();
+  const { user } = useAuth();
+  // The backend refuses anyone else; this only avoids offering a button that would fail.
+  const canRetry = Boolean(user?.isOwner) || ["owner", "admin"].includes(user?.staffRole);
   const [busyId, setBusyId] = useState(null);
   const [filter, setFilter] = useState("all");
   const [confirming, setConfirming] = useState(null);
@@ -75,7 +91,10 @@ export default function NotificationsPage() {
       render: (row) => (
         <span className="block min-w-0">
           <span className="block truncate">{TYPE_LABEL[row.type] || row.type || "Email"}</span>
-          <span className="block truncate text-caption font-normal text-ink-muted">About {row.subjectId || "an unknown record"}</span>
+          <span className="block truncate text-caption font-normal text-ink-muted">
+            {row.reference || `About ${row.subjectId || "an unknown record"}`}
+            {row.recipientMasked ? ` · ${row.recipientMasked}` : ""}
+          </span>
         </span>
       ),
     },
@@ -86,11 +105,21 @@ export default function NotificationsPage() {
         <span className="block">
           <StatusPill tone={STATUS_TONE[row.status] || "neutral"}>{STATUS_LABEL[row.status] || row.status}</StatusPill>
           {row.ambiguous && <span className="mt-1 block text-caption text-warning">May already have been delivered</span>}
+          {row.status === "retry_scheduled" && row.nextAttemptAt && <span className="mt-1 block text-caption text-ink-muted">Next try {formatDateTime(row.nextAttemptAt)}</span>}
         </span>
       ),
     },
-    { key: "attempts", header: "Attempts", align: "right", hideBelow: "md" },
-    { key: "lastError", header: "Last error", hideBelow: "lg", render: (row) => <span className="text-caption text-ink-soft">{row.lastError || "None"}</span> },
+    { key: "attempts", header: "Attempts", align: "right", hideBelow: "md", render: (row) => (row.maxAttempts ? `${row.attempts} of ${row.maxAttempts}` : row.attempts) },
+    {
+      key: "lastError",
+      header: "Last result",
+      hideBelow: "lg",
+      render: (row) => (
+        <span className="text-caption text-ink-soft">
+          {row.lastErrorCategory ? `${CATEGORY_LABEL[row.lastErrorCategory] || row.lastErrorCategory}${row.lastErrorCode ? ` · ${row.lastErrorCode}` : ""}` : row.lastError || "None"}
+        </span>
+      ),
+    },
     { key: "createdAt", header: "Queued", hideBelow: "lg", render: (row) => formatDateTime(row.createdAt) || "Not recorded" },
     { key: "sentAt", header: "Accepted", hideBelow: "md", render: (row) => (row.sentAt ? formatDateTime(row.sentAt) : "Not yet") },
     {
@@ -98,7 +127,7 @@ export default function NotificationsPage() {
       header: "Action",
       align: "right",
       render: (row) =>
-        row.status === "failed" ? (
+        RETRYABLE.has(row.status) && canRetry ? (
           <Button
             variant="secondary"
             size="sm"
