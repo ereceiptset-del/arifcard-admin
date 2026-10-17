@@ -98,6 +98,23 @@ test("card issuance talks only to the staff-protected backend, never to the card
   assert.equal((review.match(/bitnobAdmin\.issue\(/g) || []).length, 1, "exactly one issue call");
 });
 
+test("record management goes only to the staff-protected records endpoints; the browser never deletes data itself", () => {
+  const data = code(read("src/data/records.js"));
+  for (const m of data.matchAll(/`(\/[^`$]+)/g)) assert.ok(m[1].startsWith("/admin/records/"), `${m[1]} is outside /admin/records`);
+  assert.equal((data.match(/backendApi\.del\(/g) || []).length, 1, "one delete call, to the backend");
+  for (const file of SOURCE) {
+    const text = code(read(file));
+    assert.ok(!/firebase\/firestore|deleteDoc\(|firebase-admin/.test(text), `${file} must not reach Firestore directly`);
+  }
+  // No bulk or "delete everything" action exists in the admin.
+  for (const file of SOURCE) assert.ok(!/Delete all|Clear database|deleteAll|bulkDelete/i.test(code(read(file))), `${file} offers a bulk delete`);
+  // The delete dialog asks for a reason, the password and the typed word; the server checks them.
+  const ui = code(read("src/components/admin/RecordActions.jsx"));
+  assert.match(ui, /typed === "DELETE"/);
+  assert.match(ui, /type="password"/);
+  assert.ok(!/window\.confirm|confirm\(/.test(ui.replace(/confirm: typed/g, "")), "no browser confirm()");
+});
+
 test("test tooling is never part of the production build", () => {
   const vite = read("vite.config.js");
   assert.ok(!/rollupOptions|input\s*:/.test(vite), "the build input stays the default index.html");

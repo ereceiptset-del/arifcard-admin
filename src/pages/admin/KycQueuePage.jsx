@@ -7,6 +7,7 @@ import { useAsync } from "../../hooks/useAsync.js";
 import { usePage } from "../../hooks/usePage.js";
 import { adminLists } from "../../data/adminLists.js";
 import { PageNav } from "../../components/admin/PageNav.jsx";
+import { RecordActions } from "../../components/admin/RecordActions.jsx";
 
 const FILTERS = [
   { value: "all", label: "All" },
@@ -15,6 +16,15 @@ const FILTERS = [
   { value: KYC_STATUS.CHANGES_REQUESTED, label: "Changes requested" },
   { value: KYC_STATUS.APPROVED, label: "Approved" },
   { value: KYC_STATUS.REJECTED, label: "Not approved" },
+  // Never-submitted drafts: hidden from the queue unless asked for (abandoned ones can be removed).
+  { value: KYC_STATUS.NOT_SUBMITTED, label: "Drafts" },
+];
+
+// Archived cases leave the active queue and its counts; they stay findable here.
+const VIEWS = [
+  { value: "active", label: "Active" },
+  { value: "archived", label: "Archived" },
+  { value: "all", label: "All" },
 ];
 
 const OPEN = [KYC_STATUS.PENDING, KYC_STATUS.UNDER_REVIEW];
@@ -29,14 +39,15 @@ export default function KycQueuePage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const status = searchParams.get("status") || "all";
   const q = searchParams.get("q") || "";
+  const view = searchParams.get("view") || "active";
   const [query, setQuery] = useState(q);
 
-  const [page, setPage] = usePage(`${status}|${q}`);
-  const { data, error, loading, reload } = useAsync(() => adminLists.kycCases({ status, q: q || undefined, page }), [status, q, page]);
+  const [page, setPage] = usePage(`${status}|${q}|${view}`);
+  const { data, error, loading, reload } = useAsync(() => adminLists.kycCases({ status, q: q || undefined, page, view }), [status, q, page, view]);
 
   const update = (key, value) => {
     const next = new URLSearchParams(searchParams);
-    if (value && value !== "all") next.set(key, value);
+    if (value && value !== (key === "view" ? "active" : "all")) next.set(key, value);
     else next.delete(key);
     setSearchParams(next, { replace: true });
   };
@@ -70,13 +81,48 @@ export default function KycQueuePage() {
     {
       key: "kycStatus",
       header: "Status",
-      render: (row) => <StatusPill tone={KYC_STATUS_TONE[row.kycStatus] || "neutral"}>{KYC_STATUS_LABEL[row.kycStatus] || row.kycStatus}</StatusPill>,
+      render: (row) => (
+        <span className="flex flex-wrap items-center gap-1.5">
+          <StatusPill tone={KYC_STATUS_TONE[row.kycStatus] || "neutral"}>{KYC_STATUS_LABEL[row.kycStatus] || row.kycStatus}</StatusPill>
+          {row.archived && <StatusPill tone="neutral">Archived</StatusPill>}
+        </span>
+      ),
+    },
+    {
+      key: "actions",
+      header: <span className="sr-only">Actions</span>,
+      align: "right",
+      render: (row) => (
+        <RecordActions
+          type="kyc_case"
+          id={row.id}
+          actions={row.actions}
+          summary={`KYC case of ${row.customer?.name || row.customer?.email || "a customer"}`}
+          onChanged={reload}
+        />
+      ),
     },
   ];
 
   return (
     <div className="flex flex-col gap-6">
       <PageHeader title="KYC verification" description="Manual review of the documents customers upload. You make the decision; nothing is approved automatically." />
+
+      <div role="group" aria-label="Show" className="-mx-1 flex gap-2 overflow-x-auto px-1">
+        {VIEWS.map((v) => (
+          <button
+            key={v.value}
+            type="button"
+            aria-pressed={view === v.value}
+            onClick={() => update("view", v.value)}
+            className={`min-h-11 shrink-0 rounded-control border px-4 text-small font-medium ${
+              view === v.value ? "border-ink bg-surface-2 text-ink" : "border-line bg-surface-1 text-ink-soft hover:bg-surface-2"
+            }`}
+          >
+            {v.label}
+          </button>
+        ))}
+      </div>
 
       <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
         <div role="group" aria-label="Status" className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1">
@@ -140,7 +186,7 @@ export default function KycQueuePage() {
               <EmptyState
                 headingLevel={2}
                 icon={ShieldCheck}
-                title={q || status !== "all" ? "No cases match" : "No cases yet"}
+                title={q || status !== "all" || view !== "active" ? "No cases match" : "No cases yet"}
                 description={q || status !== "all" ? "Try another status or search." : "Cases appear here when customers submit their documents."}
               />
             )}

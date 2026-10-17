@@ -16,11 +16,17 @@ const qs = (params) => {
   return s ? `?${s}` : "";
 };
 const get = (path, params) => backendApi.get(`${path}${qs({ pageSize: PAGE_SIZE, ...params })}`, { auth: true });
+// Active / Archived / All: "all" is a real value here (qs drops it), so the view is added after.
+const withView = (path, params, view) => {
+  const base = qs({ pageSize: PAGE_SIZE, ...params });
+  const extra = view && view !== "active" ? `${base ? "&" : "?"}view=${encodeURIComponent(view)}` : "";
+  return backendApi.get(`${path}${base}${extra}`, { auth: true });
+};
 
 export const adminLists = {
   customers: ({ q, kycStatus, page }) => get("/admin/customers", { q, kycStatus, page }),
-  kycCases: ({ status, q, page }) => get("/admin/kyc/cases", { status, q, page }),
-  paymentClaims: ({ status, page }) => get("/admin/payments/claims", { status, page }),
+  kycCases: ({ status, q, page, view }) => withView("/admin/kyc/cases", { status, q, page }, view),
+  paymentClaims: ({ status, page, view }) => withView("/admin/payments/claims", { status, page }, view),
   auditLog: ({ action, page }) => get("/admin/audit", { action, page }),
   notificationJobs: ({ status, page }) => get("/admin/notification-jobs", { status, page }),
   operations: ({ status, page }) => get("/admin/provider/operations", { status, page }),

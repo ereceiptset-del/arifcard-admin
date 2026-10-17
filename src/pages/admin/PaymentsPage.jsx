@@ -24,6 +24,7 @@ import { usePage } from "../../hooks/usePage.js";
 import { adminLists } from "../../data/adminLists.js";
 import { PageNav } from "../../components/admin/PageNav.jsx";
 import { diagnostics, RECEIPT_STAGE_LABEL } from "../../data/diagnostics.js";
+import { RecordActions } from "../../components/admin/RecordActions.jsx";
 
 /**
  * Payments, for staff.
@@ -46,6 +47,13 @@ const FILTERS = [
   { value: "VERIFYING", label: "Verifying" },
   { value: "REJECTED_EVIDENCE", label: "Rejected" },
   { value: "VERIFIED", label: "Verified" },
+];
+
+// Archiving a payment hides it and its receipts from the active queue; Archived shows them.
+const VIEWS = [
+  { value: "active", label: "Active" },
+  { value: "archived", label: "Archived" },
+  { value: "all", label: "All" },
 ];
 
 const ACTIONS = [
@@ -80,17 +88,19 @@ export default function PaymentsPage() {
    */
   const [searchParams, setSearchParams] = useSearchParams();
   const status = searchParams.get("status") || "all";
-  const setStatus = (next) => {
+  const view = searchParams.get("view") || "active";
+  const setParam = (key, next, fallback) => {
     const params = new URLSearchParams(searchParams);
-    if (next === "all") params.delete("status");
-    else params.set("status", next);
+    if (next === fallback) params.delete(key);
+    else params.set(key, next);
     setSearchParams(params, { replace: true });
   };
+  const setStatus = (next) => setParam("status", next, "all");
 
   const [openId, setOpenId] = useState(null);
-  const [page, setPage] = usePage(status);
-  const load = useCallback(() => adminLists.paymentClaims({ status, page }), [status, page]);
-  const { data, error, loading, reload } = useAsync(load, [status, page]);
+  const [page, setPage] = usePage(`${status}|${view}`);
+  const load = useCallback(() => adminLists.paymentClaims({ status, page, view }), [status, page, view]);
+  const { data, error, loading, reload } = useAsync(load, [status, page, view]);
   const claims = data?.claims || [];
 
   const columns = [
@@ -131,17 +141,46 @@ export default function PaymentsPage() {
       header: "Result",
       render: (row) => (
         <span className="block">
-          <StatusPill tone={PAYMENT_STATUS_TONE[row.status] || "neutral"}>{PAYMENT_STATUS_LABEL[row.status] || row.status}</StatusPill>
+          <span className="flex flex-wrap items-center gap-1.5">
+            <StatusPill tone={PAYMENT_STATUS_TONE[row.status] || "neutral"}>{PAYMENT_STATUS_LABEL[row.status] || row.status}</StatusPill>
+            {row.archived && <StatusPill tone="neutral">Archived</StatusPill>}
+          </span>
           {row.reasonCode && <span className="mt-1 block text-caption text-ink-muted">{row.reasonCode}</span>}
         </span>
       ),
     },
     { key: "submittedAt", header: "Submitted", hideBelow: "md", render: (row) => (row.submittedAt ? formatDateTime(row.submittedAt) : "Not recorded") },
+    {
+      key: "actions",
+      header: <span className="sr-only">Actions</span>,
+      align: "right",
+      // The archive belongs to the payment (with all its receipts), not to this one receipt.
+      render: (row) =>
+        row.intentId ? (
+          <RecordActions type="payment" id={row.intentId} actions={row.paymentActions} summary={`Payment ${row.intent?.reference || ""}`.trim()} onChanged={reload} />
+        ) : null,
+    },
   ];
 
   return (
     <div className="flex flex-col gap-6">
       <PageHeader title="Payments" description="Receipts customers have submitted, compared with what we expected and what the provider says. Open one to review it." />
+
+      <div role="group" aria-label="Show" className="-mx-1 flex gap-2 overflow-x-auto px-1">
+        {VIEWS.map((v) => (
+          <button
+            key={v.value}
+            type="button"
+            aria-pressed={view === v.value}
+            onClick={() => setParam("view", v.value, "active")}
+            className={`min-h-11 shrink-0 rounded-control border px-4 text-small font-medium ${
+              view === v.value ? "border-ink bg-surface-2 text-ink" : "border-line bg-surface-1 text-ink-soft hover:bg-surface-2"
+            }`}
+          >
+            {v.label}
+          </button>
+        ))}
+      </div>
 
       <div role="group" aria-label="Status" className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1">
         {FILTERS.map((filter) => (

@@ -1,8 +1,9 @@
 import { useCallback, useState } from "react";
-import { StatusPill, ErrorState, Skeleton, Button, Dialog, TextInput, useToast, formatDateTime, formatMoney } from "@addiscard/ui";
+import { StatusPill, ErrorState, Skeleton, Button, Dialog, TextInput, Checkbox, useToast, formatDateTime, formatMoney } from "@addiscard/ui";
 import { ApiError } from "@addiscard/services";
 import { useAsync } from "../../hooks/useAsync.js";
 import { bitnobAdmin, KYC_STATE, CARD_STATE, FUNDING_STATUS } from "../../data/bitnobAdmin.js";
+import { RecordActions } from "./RecordActions.jsx";
 
 /**
  * One customer's card-provider (Bitnob, sandbox) picture — read-only.
@@ -16,6 +17,8 @@ import { bitnobAdmin, KYC_STATE, CARD_STATE, FUNDING_STATUS } from "../../data/b
 export default function BitnobCustomer({ uid }) {
   const load = useCallback(() => bitnobAdmin.customer(uid), [uid]);
   const { data, error, loading, reload } = useAsync(load, [uid]);
+  // Archived rows are hidden by default; nothing about them changes (visibility only).
+  const [showArchived, setShowArchived] = useState(false);
   if (error && !data) return <ErrorState title="Couldn't load the card provider status" error={error} headingLevel={4} />;
   if (loading && !data) return <Skeleton className="h-48 w-full rounded-control" />;
   const o = data.overview;
@@ -24,10 +27,17 @@ export default function BitnobCustomer({ uid }) {
   const [ct, cl] = CARD_STATE[o.card.state] || ["neutral", o.card.state];
   const d = o.declarations;
   const missingDecl = ["postalCode", "annualSalary", "expectedMonthlyVolume"].filter((f) => !d[f]);
+  const visible = (r) => showArchived || !r.archived;
+  const archivedCount = [...data.cardOperations, ...(data.transactions || []), ...data.funding].filter((r) => r.archived).length;
+  const ops = data.cardOperations.filter(visible);
+  const txs = (data.transactions || []).filter(visible);
 
   return (
     <div className="flex flex-col gap-5">
       <p className="text-caption text-ink-muted">Environment: {o.environment}. Bitnob's decisions come only from signed Bitnob events; nothing here can change them.</p>
+      {archivedCount > 0 && (
+        <Checkbox id={`show-archived-${uid}`} label={`Show archived records (${archivedCount})`} checked={showArchived} onChange={setShowArchived} />
+      )}
       <dl className="divide-y divide-line rounded-control border border-line">
         <Line label="Arifcard review (staff)" value={<StatusPill tone={o.arifcard.approved ? "success" : "neutral"}>{o.arifcard.approved ? `Approved · v${o.arifcard.approvedVersion ?? "?"}` : o.arifcard.status}</StatusPill>} />
         <Line label="Document" value={o.arifcard.documentType || "—"} />
@@ -74,9 +84,9 @@ export default function BitnobCustomer({ uid }) {
         </section>
       )}
 
-      <Funding data={data} onChange={reload} />
+      <Funding data={data} onChange={reload} visible={visible} />
 
-      {(data.cards.length > 0 || data.cardOperations.length > 0 || data.topUpRequests.length > 0) && (
+      {(data.cards.length > 0 || ops.length > 0 || data.topUpRequests.length > 0) && (
         <section>
           <h3 className="text-small font-semibold text-ink">Card history</h3>
           <ul className="mt-2 divide-y divide-line rounded-control border border-line">
@@ -87,7 +97,7 @@ export default function BitnobCustomer({ uid }) {
                 {c.needsReview && <StatusPill tone="attention">Needs review</StatusPill>}
               </HistoryRow>
             ))}
-            {data.cardOperations.map((op) => (
+            {ops.map((op) => (
               <HistoryRow
                 key={op.id}
                 at={op.createdAt}
@@ -95,6 +105,8 @@ export default function BitnobCustomer({ uid }) {
               >
                 <span className="text-ink">{op.action === "frozen" ? "Freeze" : op.action === "active" ? "Unfreeze" : `Set ${op.action}`}</span>
                 <StatusPill tone={OP_TONE[op.status] || "warning"}>{OP_LABEL[op.status] || op.status}</StatusPill>
+                {op.archived && <StatusPill tone="neutral">Archived</StatusPill>}
+                <RecordActions type="card_operation" id={op.id} actions={op.actions} summary={op.action === "frozen" ? "Freeze request" : "Unfreeze request"} onChanged={reload} />
               </HistoryRow>
             ))}
             {data.topUpRequests.map((t) => (
@@ -137,12 +149,12 @@ export default function BitnobCustomer({ uid }) {
         </section>
       )}
 
-      {data.transactions?.length > 0 && (
+      {txs.length > 0 && (
         <section>
           <h3 className="text-small font-semibold text-ink">Card activity (signed provider events)</h3>
           <ul className="mt-2 divide-y divide-line rounded-control border border-line">
-            {data.transactions.map((t) => (
-              <HistoryRow key={t.reference} at={t.occurredAt} detail={[t.chargedTo === "company_wallet" ? "charged to the company wallet" : null, t.reviewReason ? `review: ${t.reviewReason}` : null].filter(Boolean).join(" · ") || null}>
+            {txs.map((t) => (
+              <HistoryRow key={t.id || t.reference} at={t.occurredAt} detail={[t.chargedTo === "company_wallet" ? "charged to the company wallet" : null, t.reviewReason ? `review: ${t.reviewReason}` : null].filter(Boolean).join(" · ") || null}>
                 <span className="text-ink">
                   {t.merchant || t.kind} · {t.amountUnits != null ? `${units(t.amountUnits, "1000000")} ${t.currency || ""}` : "amount not reported"}
                 </span>
@@ -150,6 +162,9 @@ export default function BitnobCustomer({ uid }) {
                 {/* Bitnob sandbox "Simulate Webhook": genuine provider events, never a real purchase. */}
                 {t.simulated && <StatusPill tone="info">Sandbox simulation</StatusPill>}
                 {t.needsReview && <StatusPill tone="attention">Needs review</StatusPill>}
+                {t.archived && <StatusPill tone="neutral">Archived</StatusPill>}
+                {/* Archiving hides the row only: amount, state, reference and the card balance are untouched. */}
+                {t.id && <RecordActions type="card_transaction" id={t.id} actions={t.actions} summary={`Card transaction ${t.merchant || t.kind || ""}`.trim()} onChanged={reload} />}
               </HistoryRow>
             ))}
           </ul>
@@ -201,7 +216,7 @@ function Line({ label, value }) {
  * provider's fee is absorbed by the company and shown here only. Nothing here
  * sets a balance.
  */
-function Funding({ data, onChange }) {
+function Funding({ data, onChange, visible = () => true }) {
   const toast = useToast();
   const [busy, setBusy] = useState(null);
   const [amounts, setAmounts] = useState({});
@@ -280,9 +295,9 @@ function Funding({ data, onChange }) {
         </ul>
       )}
 
-      {data.funding.length > 0 && (
+      {data.funding.some(visible) && (
         <ul className="mt-2 divide-y divide-line rounded-control border border-line">
-          {data.funding.map((f) => {
+          {data.funding.filter(visible).map((f) => {
             const [tone, label] = FUNDING_STATUS[f.status] || ["neutral", f.status];
             const o = f.operation;
             const sendable = ["approved", "failed"].includes(f.status);
@@ -294,6 +309,9 @@ function Funding({ data, onChange }) {
                     {usd(f.usdCents)} for the card · payment {f.paymentReference || f.intentId}
                   </span>
                   <StatusPill tone={tone}>{label}</StatusPill>
+                  {f.archived && <StatusPill tone="neutral">Archived</StatusPill>}
+                  {/* Cancel stays on its own button below; the menu adds archive, restore and history. */}
+                  <RecordActions type="funding_instruction" id={f.id} actions={f.actions ? { ...f.actions, cancel: null } : null} summary={`Funding ${usd(f.usdCents)} · payment ${f.paymentReference || f.intentId}`} onChanged={onChange} />
                 </div>
                 <span className="text-caption text-ink-muted">
                   {[

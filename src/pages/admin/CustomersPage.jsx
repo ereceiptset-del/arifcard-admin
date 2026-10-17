@@ -18,6 +18,7 @@ import { useAsync } from "../../hooks/useAsync.js";
 import { usePage } from "../../hooks/usePage.js";
 import { adminLists } from "../../data/adminLists.js";
 import { PageNav } from "../../components/admin/PageNav.jsx";
+import { RecordActions } from "../../components/admin/RecordActions.jsx";
 // CODEGO DISABLED (owner decision, 2026-10-02): card issuing moves to Bitnob.
 // import IssuerFunding from "../../components/admin/IssuerFunding.jsx";
 // import IssuerCardOrders from "../../components/admin/IssuerCardOrders.jsx";
@@ -203,7 +204,7 @@ const TABS = [
 /** One customer in full. The only place the real email is shown. */
 function CustomerDrawer({ uid, onClose }) {
   const load = useCallback(() => adminService.customer(uid), [uid]);
-  const { data, error, loading } = useAsync(load, [uid]);
+  const { data, error, loading, reload } = useAsync(load, [uid]);
   const customer = data?.customer;
   const [tab, setTab] = useState("overview");
 
@@ -243,12 +244,16 @@ function CustomerDrawer({ uid, onClose }) {
                     <li key={c.id} className="px-4 py-3">
                       <div className="flex flex-wrap items-center gap-2">
                         <StatusPill tone={KYC_STATUS_TONE[c.kycStatus]}>{KYC_STATUS_LABEL[c.kycStatus] || c.kycStatus}</StatusPill>
+                        {c.archived && <StatusPill tone="neutral">Archived</StatusPill>}
                         <span className="text-caption text-ink-muted">
                           {KYC_METHOD_LABEL[c.method] || c.method}, version {c.version}
                         </span>
-                        <Link to={`/kyc/${c.id}`} className="ml-auto inline-flex min-h-11 items-center text-small font-medium text-link hover:underline">
-                          Open case
-                        </Link>
+                        <span className="ml-auto flex items-center gap-2">
+                          <Link to={`/kyc/${c.id}`} className="inline-flex min-h-11 items-center text-small font-medium text-link hover:underline">
+                            Open case
+                          </Link>
+                          <RecordActions type="kyc_case" id={c.id} actions={c.actions} summary={`KYC case of ${customer.name || customer.email}`} onChanged={reload} />
+                        </span>
                       </div>
                       {c.customerReason && <p className="mt-1.5 text-small text-ink">{c.customerReason}</p>}
                       <p className="mt-1 text-caption text-ink-muted">
@@ -274,6 +279,8 @@ function CustomerDrawer({ uid, onClose }) {
                         </span>
                         <span className="shrink-0 text-small font-medium tabular-nums text-ink">{formatMoney(p.amountMinor, p.currency || "ETB")}</span>
                         <StatusPill tone={PAYMENT_STATUS_TONE[p.status] || "neutral"}>{PAYMENT_STATUS_LABEL[p.status] || p.status}</StatusPill>
+                        {p.archived && <StatusPill tone="neutral">Archived</StatusPill>}
+                        <RecordActions type="payment" id={p.id} actions={p.actions} summary={`Payment ${p.reference || ""}`.trim()} onChanged={reload} />
                       </li>
                     ))}
                   </ul>

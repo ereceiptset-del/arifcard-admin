@@ -18,6 +18,7 @@ import {
 } from "@addiscard/ui";
 import { adminService, ApiError, KYC_STATUS, KYC_STATUS_LABEL, KYC_STATUS_TONE, EVIDENCE_SLOTS, KYC_METHOD_LABEL } from "@addiscard/services";
 import { useAsync } from "../../hooks/useAsync.js";
+import { RecordDangerZone } from "../../components/admin/RecordActions.jsx";
 
 /**
  * KYC review workspace: documents, what the customer entered, and the
@@ -531,6 +532,9 @@ export default function KycCasePage() {
               <p className="mt-3 text-caption text-ink-muted">The mail server accepted the message. That doesn't confirm it reached their inbox.</p>
             )}
           </Panel>
+
+          {/* Archive / restore and the deletion-eligibility check; quiet, at the end. */}
+          <RecordDangerZone type="kyc_case" id={record.id} summary={`KYC case of ${record.customer?.name || record.customer?.email || "this customer"}`} onChanged={reload} />
         </div>
       </div>
     </div>
