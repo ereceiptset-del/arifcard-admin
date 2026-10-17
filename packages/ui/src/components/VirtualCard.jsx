@@ -35,6 +35,9 @@ export function VirtualCard({
   network,
   statusLabel,
   animateIn = false,
+  // Colourway of the artwork. Customers' cards are always "violet"; the
+  // others exist for the sign-in showcase, where several cards are layered.
+  tone = "violet",
   className = "",
 }) {
   const view = STATE[state] || { icon: CircleDashed, label: state, art: "" };
@@ -59,7 +62,7 @@ export function VirtualCard({
         animateIn ? "animate-card-in" : ""
       } ${className}`}
     >
-      <CardArt className={`absolute inset-0 -z-10 h-full w-full transition-[filter,opacity] duration-300 ${view.art}`} />
+      <CardArt tone={tone} className={`absolute inset-0 -z-10 h-full w-full transition-[filter,opacity] duration-300 ${view.art}`} />
 
       {state === "frozen" && (
         <div aria-hidden className="absolute inset-0 -z-[5] bg-white/12 backdrop-blur-[1.5px]" />
@@ -149,30 +152,38 @@ function artworkPaths() {
   return artwork;
 }
 
-function CardArt({ className = "" }) {
+/** Field gradient, glow, rosette and wave colours per colourway. */
+const TONES = {
+  violet: { field: ["#4a27a8", "#2a1873", "#120c2c"], glow: "#8055ff", glowOpacity: 0.55, rosette: "#d6c7ff", wave: "#baa1ff" },
+  midnight: { field: ["#1f2a47", "#111a30", "#060912"], glow: "#4d74e0", glowOpacity: 0.4, rosette: "#c3cff0", wave: "#93a6da" },
+  ocean: { field: ["#2563c9", "#17479b", "#0b2352"], glow: "#7db2ff", glowOpacity: 0.5, rosette: "#d6e5ff", wave: "#a9c8ff" },
+};
+
+function CardArt({ tone = "violet", className = "" }) {
   const id = useId().replace(/:/g, "");
   const { rosettes, waves } = artworkPaths();
+  const c = TONES[tone] || TONES.violet;
   return (
     <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="xMidYMid slice" className={className} aria-hidden focusable="false">
       <defs>
         <linearGradient id={`${id}-field`} x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0" stopColor="#4a27a8" />
-          <stop offset="0.55" stopColor="#2a1873" />
-          <stop offset="1" stopColor="#120c2c" />
+          <stop offset="0" stopColor={c.field[0]} />
+          <stop offset="0.55" stopColor={c.field[1]} />
+          <stop offset="1" stopColor={c.field[2]} />
         </linearGradient>
         <radialGradient id={`${id}-glow`} cx="0.82" cy="0.32" r="0.55">
-          <stop offset="0" stopColor="#8055ff" stopOpacity="0.55" />
-          <stop offset="1" stopColor="#8055ff" stopOpacity="0" />
+          <stop offset="0" stopColor={c.glow} stopOpacity={c.glowOpacity} />
+          <stop offset="1" stopColor={c.glow} stopOpacity="0" />
         </radialGradient>
       </defs>
       <rect width={W} height={H} fill={`url(#${id}-field)`} />
       <rect width={W} height={H} fill={`url(#${id}-glow)`} />
-      <g fill="none" stroke="#d6c7ff" strokeWidth="1.1" opacity="0.22">
+      <g fill="none" stroke={c.rosette} strokeWidth="1.1" opacity="0.22">
         {rosettes.map((d, k) => (
           <path key={k} d={d} />
         ))}
       </g>
-      <g fill="none" stroke="#baa1ff" strokeWidth="1" opacity="0.16">
+      <g fill="none" stroke={c.wave} strokeWidth="1" opacity="0.16">
         {waves.map((d, k) => (
           <path key={k} d={d} />
         ))}

@@ -140,13 +140,6 @@ function ForgotPasswordForm({ defaultStep = "request" }) {
 
   return (
     <div className="w-full max-w-[384px]">
-      {/* Mobile-only wordmark so branding remains visible when left panel collapses */}
-      <div className="lg:hidden mb-8">
-        <Link to="/" className="text-[18px] font-semibold tracking-tight text-ink">
-          Arifcard
-        </Link>
-      </div>
-
       <div>
         <h1 className="text-[22px] font-semibold text-ink tracking-tight">
           Reset your password
