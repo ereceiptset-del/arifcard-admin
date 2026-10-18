@@ -279,7 +279,47 @@ const ISSUANCE = {
 };
 const PAYMENT_SUMMARY = { orders: { AWAITING_REFERENCE: 3, CLAIMED_PAID: 1, REFERENCE_OVERDUE: 2 }, payments: { VERIFYING: 1, REQUIRES_REVIEW: 2, REJECTED_EVIDENCE: 4, VERIFIED: 37 }, receipts: { DELAYED: 1, LATE: 1, OWNERSHIP: 1, DUPLICATE: 0 } };
 
+// Account access (synthetic): &account=disabled|deleting starts the customer in that state.
+const ACCOUNT_START = { disabled: "TEMPORARILY_DISABLED", deleting: "DELETION_IN_PROGRESS" }[params.get("account")] || "ACTIVE";
+const account = {
+  uid: "visual-customer",
+  accountStatus: ACCOUNT_START,
+  version: ACCOUNT_START === "ACTIVE" ? 0 : 2,
+  firebaseAuth: "available",
+  lastSignInAt: ago(30),
+  createdAt: ago(60 * 24 * 3),
+  disabledAt: ACCOUNT_START === "TEMPORARILY_DISABLED" ? ago(90) : null,
+  disabledBy: ACCOUNT_START === "TEMPORARILY_DISABLED" ? "Test Staff" : null,
+  disabledReason: ACCOUNT_START === "TEMPORARILY_DISABLED" ? "Synthetic: unusual payment pattern under review." : null,
+  enabledAt: null,
+  enabledBy: null,
+};
+const accountView = () => ({ ...account, arifcardAccess: account.accountStatus === "ACTIVE" ? "active" : "restricted", actions: { disable: account.accountStatus === "ACTIVE", enable: account.accountStatus === "TEMPORARILY_DISABLED", checkDeletion: true } });
+const transitionAccount = (to, body) => {
+  if (body.expectedVersion !== account.version) return { __status: 409, message: "This account changed since you opened it.", code: "STALE_ACCOUNT_STATE" };
+  const fromStatus = account.accountStatus;
+  Object.assign(account, { accountStatus: to, version: account.version + 1 }, to === "ACTIVE" ? { enabledAt: new Date().toISOString(), enabledBy: "Test Staff" } : { disabledAt: new Date().toISOString(), disabledBy: "Test Staff", disabledReason: body.reason });
+  return { fromStatus, toStatus: to, version: account.version, sessionsRevoked: true, account: accountView() };
+};
+const DELETION_PREVIEW = {
+  canStartDeletion: false,
+  accountStatus: "ACTIVE",
+  dependencies: { activeCards: 1, cards: 1, pendingPayments: 1, verifiedPayments: 2, topups: 1, transactions: 4, unresolvedProviderOperations: 0, identityCases: 1, identityFiles: 3 },
+  blockers: [
+    { code: "RETENTION_POLICY_NOT_APPROVED", message: "Permanent deletion is not enabled yet: the retention and de-identification policy for identity evidence and financial history has not been approved." },
+    { code: "ACTIVE_CARD_EXISTS", message: "The customer has a card that requires review first." },
+    { code: "OPEN_PAYMENT", message: "The customer has a payment that is not settled yet." },
+    { code: "FINANCIAL_HISTORY_RETAINED", message: "Verified payments and card history must be de-identified, not deleted, under the approved retention policy." },
+  ],
+  plannedActions: ["Block account access and revoke sessions", "Remove eligible profile and contact data", "Remove approved private identity files", "De-identify retained payment, card and transaction records", "Delete the Firebase Authentication user", "Keep a restricted deletion tombstone without personal data"],
+  willNot: ["reverse completed payments", "reverse card transactions", "erase provider-side history", "refund money", "cancel unresolved provider operations"],
+};
+
 const ROUTES = [
+  [/^\/admin\/customers\/[^/]+\/account$/, () => ({ account: accountView() })],
+  [/^\/admin\/customers\/[^/]+\/disable$/, (body) => transitionAccount("TEMPORARILY_DISABLED", body)],
+  [/^\/admin\/customers\/[^/]+\/enable$/, (body) => transitionAccount("ACTIVE", body)],
+  [/^\/admin\/customers\/[^/]+\/deletion-preview$/, () => ({ preview: { ...DELETION_PREVIEW, accountStatus: account.accountStatus } })],
   [/^\/admin\/operations\/summary$/, () => ({ summary: OPERATIONS_SUMMARY })],
   [/^\/admin\/bitnob\/topup-requests$/, () => ({ requests: TOPUPS, provider: { available: true } })],
   [/^\/admin\/bitnob\/issuance$/, () => ISSUANCE],
@@ -297,8 +337,8 @@ const ROUTES = [
   [/^\/admin\/payments\/claims$/, () => ({ claims: [{ id: CLAIM.id, intent: { id: "i1", reference: "PAY-TEST01", amountMinor: 550000, currency: "ETB", status: "REQUIRES_REVIEW" }, claimedAmountMinor: 550000, providerAmountMinor: 500000, reasonCode: "AMOUNT_MISMATCH", tokenHint: "…BCDE", attempt: 2, submittedAt: ago(42), method: "CBE", status: "REQUIRES_REVIEW" }, { id: "c2", intent: { id: "i3", reference: "PAY-TEST03", amountMinor: 120000, currency: "ETB", status: "VERIFIED" }, claimedAmountMinor: 120000, providerAmountMinor: 120000, reasonCode: "VERIFIED_AUTOMATICALLY", tokenHint: "…9876", attempt: 1, submittedAt: ago(300), method: "TELEBIRR", status: "VERIFIED" }] })],
   [/^\/admin\/payments\/claims\/[^/]+\/(recheck|decision)$/, () => ({ claim: { ...CLAIM, status: "VERIFIED", actions: [] } })],
   [/^\/admin\/payments\/claims\/[^/]+$/, () => ({ claim: CLAIM })],
-  [/^\/admin\/customers$/, () => ({ customers: [{ uid: "visual-customer", email: "t***@example.test", name: "Test Customer", active: true, disabled: false, emailVerified: true, kycStatus: "PENDING", kycMethod: "MANUAL_FAYDA", paymentCount: 2, createdAt: ago(60 * 24 * 3) }, { uid: "c2", email: "a***@example.test", name: "Another Customer", active: true, disabled: false, emailVerified: false, kycStatus: "NOT_SUBMITTED", kycMethod: null, paymentCount: 0, createdAt: ago(60 * 24) }], truncated: false })],
-  [/^\/admin\/customers\/[^/]+$/, () => ({ customer: { uid: "visual-customer", email: "test.customer@example.test", name: "Test Customer", emailVerified: true, disabled: false, createdAt: ago(60 * 24 * 3), lastSignInAt: ago(30), cases: [{ id: CASE.id, kycStatus: "PENDING", method: "MANUAL_FAYDA", documentType: "FAYDA", version: 2, submittedAt: ago(60 * 5), decidedAt: null, reviewerName: null, customerReason: null }], payments: [{ id: "i1", method: "CBE", reference: "PAY-TEST01", amountMinor: 550000, currency: "ETB", status: "REQUIRES_REVIEW", createdAt: ago(120) }] } })],
+  [/^\/admin\/customers$/, () => ({ customers: [{ uid: "visual-customer", email: "t***@example.test", name: "Test Customer", active: true, disabled: false, emailVerified: true, accountStatus: account.accountStatus, kycStatus: "PENDING", kycMethod: "MANUAL_FAYDA", paymentCount: 2, createdAt: ago(60 * 24 * 3) }, { uid: "c2", email: "a***@example.test", name: "Another Customer", active: true, disabled: false, emailVerified: false, kycStatus: "NOT_SUBMITTED", kycMethod: null, paymentCount: 0, createdAt: ago(60 * 24) }], truncated: false })],
+  [/^\/admin\/customers\/[^/]+$/, () => ({ customer: { uid: "visual-customer", email: "test.customer@example.test", name: "Test Customer", emailVerified: true, disabled: false, accountStatus: account.accountStatus, createdAt: ago(60 * 24 * 3), lastSignInAt: ago(30), cases: [{ id: CASE.id, kycStatus: "PENDING", method: "MANUAL_FAYDA", documentType: "FAYDA", version: 2, submittedAt: ago(60 * 5), decidedAt: null, reviewerName: null, customerReason: null }], payments: [{ id: "i1", method: "CBE", reference: "PAY-TEST01", amountMinor: 550000, currency: "ETB", status: "REQUIRES_REVIEW", createdAt: ago(120) }] } })],
   [/^\/admin\/provider\/customers\/[^/]+\/card-orders$/, () => ({ orders: ORDERS })],
   [/^\/admin\/provider\/customers\/[^/]+\/funding$/, () => ({ route: { ready: true, reason: null }, problem: null, balances: { values: [], note: "Sandbox balances." }, options: [], records: [] })],
   [/^\/admin\/provider\/customers\/[^/]+\/refresh$/, () => ({ refreshed: true, onboarding: { state: "APPROVED" } })],
@@ -327,7 +367,13 @@ window.fetch = (input, init = {}) => {
   const url = new URL(typeof input === "string" ? input : input.url, window.location.origin);
   const path = url.pathname.replace(/^.*\/api/, "");
   const body = init.body ? JSON.parse(init.body) : {};
-  for (const [pattern, respond] of ROUTES) if (pattern.test(path)) return json(respond(body));
+  for (const [pattern, respond] of ROUTES) {
+    if (!pattern.test(path)) continue;
+    const result = respond(body);
+    // A fixture may answer with an error: { __status, message, code }.
+    if (result?.__status) return json({ error: { message: result.message, code: result.code } }, result.__status);
+    return json(result);
+  }
   return json({ message: "Not part of this harness.", code: "NOT_FOUND" }, 404);
 };
 

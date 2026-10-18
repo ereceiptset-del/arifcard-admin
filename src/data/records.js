@@ -48,4 +48,6 @@ export const AUDIT_ACTION_LABEL = {
   "payment.staff_decision": "Payment decided by staff",
   "payment.recheck": "Receipt checked again",
   "provider.transaction.review": "Flagged for review",
+  "customer.temporarily_disabled": "Account temporarily disabled",
+  "customer.reenabled": "Account re-enabled",
 };

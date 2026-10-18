@@ -23,6 +23,8 @@ import { RecordActions } from "../../components/admin/RecordActions.jsx";
 // import IssuerFunding from "../../components/admin/IssuerFunding.jsx";
 // import IssuerCardOrders from "../../components/admin/IssuerCardOrders.jsx";
 import BitnobCustomer from "../../components/admin/BitnobCustomer.jsx";
+import CustomerAccess from "../../components/admin/CustomerAccess.jsx";
+import { ACCOUNT_STATUS_LABEL, ACCOUNT_STATUS_TONE } from "../../data/customerAccess.js";
 
 /**
  * Customers.
@@ -51,8 +53,15 @@ const FILTERS = [
   { value: KYC_STATUS.REJECTED, label: "Rejected" },
 ];
 
+// Arifcard access first (temporarily disabled, deletion…), then Firebase Auth's own state.
 const accountPill = (row) =>
-  row.disabled ? { tone: "danger", label: "Disabled" } : row.emailVerified ? { tone: "success", label: "Active" } : { tone: "attention", label: "Email not confirmed" };
+  row.accountStatus && row.accountStatus !== "ACTIVE"
+    ? { tone: ACCOUNT_STATUS_TONE[row.accountStatus] || "attention", label: ACCOUNT_STATUS_LABEL[row.accountStatus] || "Restricted" }
+    : row.disabled
+      ? { tone: "danger", label: "Disabled" }
+      : row.emailVerified
+        ? { tone: "success", label: "Active" }
+        : { tone: "attention", label: "Email not confirmed" };
 
 export default function CustomersPage() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -186,7 +195,7 @@ export default function CustomersPage() {
         </p>
       )}
 
-      {openUid && <CustomerDrawer uid={openUid} onClose={() => setOpenUid(null)} />}
+      {openUid && <CustomerDrawer uid={openUid} onClose={() => setOpenUid(null)} onAccessChanged={reload} />}
     </div>
   );
 }
@@ -199,12 +208,18 @@ const TABS = [
   // { value: "issuer", label: "Card issuer" },
   // { value: "cards", label: "Cards and funding" },
   { value: "bitnob", label: "Card provider" },
+  { value: "access", label: "Account access" },
 ];
 
 /** One customer in full. The only place the real email is shown. */
-function CustomerDrawer({ uid, onClose }) {
+function CustomerDrawer({ uid, onClose, onAccessChanged: onListChanged }) {
   const load = useCallback(() => adminService.customer(uid), [uid]);
-  const { data, error, loading, reload } = useAsync(load, [uid]);
+  const { data, error, loading, reload, setData } = useAsync(load, [uid]);
+  // Patch the status in place (a reload would unmount the open tab), then refresh the list behind.
+  const onAccessChanged = (account) => {
+    if (account) setData((d) => (d?.customer ? { ...d, customer: { ...d.customer, accountStatus: account.accountStatus } } : d));
+    onListChanged?.();
+  };
   const customer = data?.customer;
   const [tab, setTab] = useState("overview");
 
@@ -297,6 +312,7 @@ function CustomerDrawer({ uid, onClose }) {
             </div>
             )} */}
             {tab === "bitnob" && <BitnobCustomer uid={uid} />}
+            {tab === "access" && <CustomerAccess uid={uid} summary={customer.name ? `${customer.name} (${customer.email})` : customer.email} onChanged={onAccessChanged} />}
           </TabPanel>
         </div>
       )}

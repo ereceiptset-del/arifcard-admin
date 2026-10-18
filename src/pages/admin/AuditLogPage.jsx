@@ -37,10 +37,12 @@ const ACTIONS = [
   ["provider.operation.resolved", "Issuer operation resolved"],
   ["provider.event.applied", "Issuer event applied"],
   ["provider.event.reprocess", "Issuer event reprocessed"],
+  ["customer.temporarily_disabled", "Customer account disabled"],
+  ["customer.reenabled", "Customer account re-enabled"],
   ["staff.owner.granted", "Ownership granted"],
 ];
 const LABEL = Object.fromEntries(ACTIONS);
-const tone = (action) => (action === "staff.owner.granted" ? "danger" : action.startsWith("kyc") ? "accent" : action.startsWith("payment") ? "info" : "neutral");
+const tone = (action) => (action === "staff.owner.granted" || action === "customer.temporarily_disabled" ? "danger" : action.startsWith("kyc") ? "accent" : action.startsWith("payment") ? "info" : "neutral");
 
 /** Human labels for fields entries commonly carry. */
 const FIELD_LABEL = {
