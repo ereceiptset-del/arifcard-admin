@@ -1,12 +1,12 @@
 import { Fragment, useCallback, useState } from "react";
 import { CreditCard, ClipboardCheck, RefreshCw } from "lucide-react";
+import { Link } from "react-router-dom";
 import { Panel, PageHeader, Table, StatusPill, Button, Skeleton, ErrorState, EmptyState, formatDateTime, formatMoney } from "@addiscard/ui";
 import { ApiError } from "@addiscard/services";
 import { useAsync } from "../../hooks/useAsync.js";
 import { usePage, pageRows } from "../../hooks/usePage.js";
 import { PageNav } from "../../components/admin/PageNav.jsx";
 import { bitnobAdmin, ISSUANCE_LABEL, ISSUANCE_BLOCKER_LABEL } from "../../data/bitnobAdmin.js";
-import TopupRequests from "../../components/admin/TopupRequests.jsx";
 import CardIssuanceReview from "../../components/admin/CardIssuanceReview.jsx";
 
 /** "robelamare75@gmail.com" → "robe••••@gmail.com" (the row needs to recognise, not to contact). */
@@ -64,8 +64,16 @@ export default function CardIssuancePage() {
         SECTIONS.map((section) => (
           <Fragment key={section.key}>
             <IssuanceSection section={section} rows={rows.filter((r) => section.states.includes(r.state))} setConfirm={setReviewing} />
-            {/* Its own card, right after "Ready for card issuance": top-ups are not issuance. */}
-            {section.key === "ready" && <TopupRequests />}
+            {/* Top-ups fund an existing card: their own queue, linked here. */}
+            {section.key === "ready" && (
+              <p className="-mt-3 text-small text-ink-muted">
+                Top-ups for existing cards are a separate queue:{" "}
+                <Link to="/top-ups" className="font-medium text-link hover:underline">
+                  Top-up requests
+                </Link>
+                .
+              </p>
+            )}
           </Fragment>
         ))}
       <ConnectionPanel />

@@ -205,12 +205,87 @@ const SETTINGS = {
     cbeReceipts: { label: "CBE receipts", status: "configured", detail: "Receipts are read from CBE." },
     telebirrReceipts: { label: "Telebirr receipts", status: "configured", detail: "Receipts are read from Telebirr." },
     faydaApi: { label: "Fayda API", status: "not configured", detail: "On hold. Every verification here is a person's judgement." },
-    cardProvider: { label: "Card provider (Codego)", status: "configured", detail: "sandbox · api.sandbox.example. Connection only." },
+    cardProvider: { label: "Card issuer (Bitnob)", provider: "Bitnob", environment: "sandbox", status: "configured", detail: "sandbox · test cards only; no real money." },
     owner: { label: "Owner account", status: "configured", detail: "Set." },
   },
 };
 
+/*
+ * Card issuing, top-ups and the operations overview (Bitnob sandbox).
+ * `&ops=unavailable` makes the overview's top-up count fail, to check that
+ * an uncounted figure reads "Unavailable", never 0.
+ */
+const quote = (usdCents, totalMinor) => ({ usdCents, etbPerUsd: "200.0000", baseEtbMinor: null, customerFeeEtbMinor: null, totalPayableEtbMinor: totalMinor, pricingPolicyVersion: "v2", pricingModel: "deducted", customerFeeType: "percentage", customerFeePercentage: 1, convertedUsdCents: Math.round(usdCents * 1.0101), customerFeeUsdCents: Math.round(usdCents * 0.0101) });
+const topup = (n, paymentStatus, instruction, bucket) => ({
+  intentId: `visual-topup-${n}`,
+  uid: `visual-customer-${n}`,
+  customer: { name: `Test Customer ${n}`, email: `customer${n}@example.test` },
+  reference: `ARF-TOPUP00${n}`,
+  paymentStatus,
+  createdAt: ago(60 * n),
+  verifiedAt: paymentStatus === "VERIFIED" ? ago(50 * n) : null,
+  cardLast4: "0000",
+  quote: quote(1000 * n, 202000 * n),
+  verifiedAmountMinor: paymentStatus === "VERIFIED" ? 202000 * n : null,
+  providerFeeEstimateCents: 100,
+  walletRequirementCents: 1000 * n + 100,
+  instruction,
+  bucket,
+  canApprove: paymentStatus === "VERIFIED" && !instruction,
+});
+const TOPUPS = [
+  topup(1, "AWAITING_PAYMENT", null, "awaiting_reference"),
+  topup(2, "VERIFYING", null, "verifying_payment"),
+  topup(3, "VERIFIED", null, "awaiting_allocation"),
+  topup(4, "VERIFIED", { id: "visual-instr-4", status: "approved", usdCents: 4000 }, "ready_for_funding"),
+  topup(5, "VERIFIED", { id: "visual-instr-5", status: "pending", usdCents: 5000 }, "funding_in_progress"),
+  topup(6, "VERIFIED", { id: "visual-instr-6", status: "unknown", usdCents: 6000 }, "reconciliation_required"),
+  topup(7, "VERIFIED", { id: "visual-instr-7", status: "funded", usdCents: 7000 }, "completed"),
+];
+const bucketCount = (b) => TOPUPS.filter((t) => t.bucket === b).length;
+const OPERATIONS_SUMMARY = {
+  generatedAt: new Date(now).toISOString(),
+  issuance: { ready: 2, oldestReadySince: ago(60 * 26), blocked: 1, provisioning: 1, reconciliation: 1, environment: "sandbox" },
+  topups:
+    params.get("ops") === "unavailable"
+      ? { unavailable: "Could not be counted just now." }
+      : {
+          actionable: bucketCount("awaiting_allocation") + bucketCount("ready_for_funding") + bucketCount("needs_attention") + bucketCount("reconciliation_required"),
+          awaiting_reference: bucketCount("awaiting_reference"),
+          verifying_payment: bucketCount("verifying_payment"),
+          awaiting_allocation: bucketCount("awaiting_allocation"),
+          ready_for_funding: bucketCount("ready_for_funding"),
+          funding_in_progress: bucketCount("funding_in_progress"),
+          needs_attention: bucketCount("needs_attention"),
+          reconciliation_required: bucketCount("reconciliation_required"),
+          completed: bucketCount("completed"),
+        },
+  kyc: { awaitingReview: 4, pending: 3, underReview: 1 },
+  payments: { needsPerson: 2, verificationDelayed: 1, awaitingReference: 3, referenceOverdue: 2 },
+};
+const issuanceRow = (n, state, extra = {}) => ({ uid: `visual-customer-${n}`, name: `Test Customer ${n}`, email: `customer${n}@example.test`, state, blockers: [], kycPath: "sandbox_exempt", paymentReference: `ARF-CARD000${n}`, paymentAmountMinor: 505000, paymentCurrency: "ETB", paymentVerifiedAt: ago(60 * 26), cardAmountCents: 2100, provider: "bitnob", environment: "sandbox", eligibleAt: ago(60 * 26 - n), retryable: false, providerMessage: null, lastIssue: null, updatedAt: ago(30), ...extra });
+const ISSUANCE = {
+  environment: "sandbox",
+  initialAmountUsd: "21.00",
+  cardType: "Standard virtual card",
+  provider: { available: true },
+  rows: [
+    issuanceRow(1, "ready_for_issuance"),
+    issuanceRow(2, "ready_for_issuance"),
+    issuanceRow(3, "blocked", { blockers: ["BITNOB_KYC_REQUIRED"] }),
+    issuanceRow(4, "provisioning"),
+    issuanceRow(5, "unknown"),
+  ],
+};
+const PAYMENT_SUMMARY = { orders: { AWAITING_REFERENCE: 3, CLAIMED_PAID: 1, REFERENCE_OVERDUE: 2 }, payments: { VERIFYING: 1, REQUIRES_REVIEW: 2, REJECTED_EVIDENCE: 4, VERIFIED: 37 }, receipts: { DELAYED: 1, LATE: 1, OWNERSHIP: 1, DUPLICATE: 0 } };
+
 const ROUTES = [
+  [/^\/admin\/operations\/summary$/, () => ({ summary: OPERATIONS_SUMMARY })],
+  [/^\/admin\/bitnob\/topup-requests$/, () => ({ requests: TOPUPS, provider: { available: true } })],
+  [/^\/admin\/bitnob\/issuance$/, () => ISSUANCE],
+  [/^\/admin\/bitnob\/connectivity$/, () => ({ ok: true, environment: "sandbox", checkedAt: new Date(now).toISOString() })],
+  [/^\/admin\/payments\/summary$/, () => ({ summary: PAYMENT_SUMMARY })],
+  [/^\/admin\/payments\/orders$/, () => ({ orders: [{ id: "visual-order-1", reference: "ARF-ORDER001", queue: "AWAITING_REFERENCE", status: "AWAITING_PAYMENT", purpose: "CARD_CREATION", method: "CBE", amountMinor: 505000, currency: "ETB", owner: { uid: "visual-customer", email: "test.customer@example.test", name: "Test Customer" }, customerClaimedPaid: true, customerClaimedPaidAt: ago(20), remindersSent: 1, createdAt: ago(60 * 7), paymentDeadline: ago(-60 * 17), referenceDeadline: ago(-60 * 24 * 7), archived: false }], pagination: { page: 1, pageSize: 20, total: 1, totalPages: 1, hasPrevious: false, hasNext: false } })],
   [/^\/auth\/me$/, () => ({ user: USER })],
   [/^\/admin\/settings$/, () => SETTINGS],
   [/^\/admin\/analytics$/, () => ANALYTICS],

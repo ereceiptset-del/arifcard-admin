@@ -1,6 +1,6 @@
 import { useCallback, useState } from "react";
 import { Link } from "react-router-dom";
-import { TriangleAlert, Clock, Users, Banknote, Mail } from "lucide-react";
+import { TriangleAlert, Clock, Mail } from "lucide-react";
 import {
   Panel,
   PageHeader,
@@ -16,6 +16,7 @@ import {
   formatDateTime,
 } from "@addiscard/ui";
 import { adminService } from "@addiscard/services";
+import { OperationsSummary } from "../../components/admin/OperationsSummary.jsx";
 import { useAsync } from "../../hooks/useAsync.js";
 
 /**
@@ -89,19 +90,7 @@ export default function OverviewPage() {
 
   const attention = data
     ? [
-        waiting > 0 && {
-          key: "kyc",
-          icon: Users,
-          to: "/kyc?status=PENDING",
-          text: `${waiting} identity ${waiting === 1 ? "case is" : "cases are"} waiting`,
-          detail: kyc.oldestWaiting ? `Oldest since ${formatDateTime(kyc.oldestWaiting.submittedAt)}` : null,
-        },
-        (payments.needsReview.value || 0) > 0 && {
-          key: "payments",
-          icon: Banknote,
-          to: "/payments?status=REQUIRES_REVIEW",
-          text: `${payments.needsReview.value} ${payments.needsReview.value === 1 ? "payment needs" : "payments need"} a person`,
-        },
+        // KYC and payment queues are in "Needs a person now" above; only what is not is listed here.
         (ops.failedNotifications.value || 0) > 0 && {
           key: "mail",
           icon: Mail,
@@ -120,7 +109,7 @@ export default function OverviewPage() {
     <div className="flex flex-col gap-6">
       <PageHeader
         title="Overview"
-        description="Counted from the records themselves, each time this page loads."
+        description="What needs a person now, then activity over a period. Everything is counted from the records each time this page loads."
         meta={
           data && (
             <span className="text-caption text-ink-muted" title={`${data.window.startUtc} to ${data.window.endUtc} UTC`}>
@@ -129,6 +118,11 @@ export default function OverviewPage() {
           )
         }
       />
+
+      {/* Operations first: the queues an operator works, each opening its exact rows. */}
+      <OperationsSummary />
+
+      <h2 className="mt-2 text-h3 text-ink">Activity this period</h2>
 
       {/* Filters */}
       <div className="flex flex-wrap items-end gap-2">

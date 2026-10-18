@@ -111,3 +111,19 @@ export const ATTENTION_LABEL = {
   sandbox_topup_unresolved: "Sandbox test top-up: not confirmed yet",
   sandbox_topup_review_required: "Sandbox test top-up needs review",
 };
+
+/**
+ * The top-up queue's groups, in the order an operator works through them.
+ * `bucket` is computed by the backend (funding.js topupBucket) — the same
+ * definition the operations overview counts with.
+ */
+export const TOPUP_BUCKETS = [
+  { value: "awaiting_reference", label: "Awaiting payment reference" },
+  { value: "verifying_payment", label: "Verifying payment" },
+  { value: "awaiting_allocation", label: "Awaiting USD allocation" },
+  { value: "ready_for_funding", label: "Ready for funding" },
+  { value: "funding_in_progress", label: "Funding in progress" },
+  { value: "needs_attention", label: "Needs attention" },
+  { value: "reconciliation_required", label: "Reconciliation required" },
+  { value: "completed", label: "Completed" },
+];

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { Fragment, useEffect, useRef, useState } from "react";
 import { Menu, X, Moon, Sun, LogOut, PanelLeftClose, PanelLeftOpen, Ellipsis } from "lucide-react";
 import { useTheme } from "../theme/ThemeProvider.jsx";
 import { useFocusTrap } from "../lib/useFocusTrap.js";
@@ -80,6 +80,27 @@ export function AppShell({
     );
   };
 
+  /**
+   * The nav list. An item may carry a `section` label: a heading is drawn
+   * where the section changes (a hairline when the rail is collapsed), so a
+   * long admin menu reads as groups of related work.
+   */
+  const navList = (options = {}) =>
+    navItems.map((item, index) => {
+      const heading = item.section && item.section !== navItems[index - 1]?.section;
+      return (
+        <Fragment key={item.to}>
+          {heading &&
+            (options.compact ? (
+              index > 0 && <hr aria-hidden className="mx-2 my-1.5 border-line" />
+            ) : (
+              <p className={`px-3 pb-1 text-caption font-medium text-ink-muted ${index > 0 ? "pt-3" : ""}`}>{item.section}</p>
+            ))}
+          {navLink(item, options)}
+        </Fragment>
+      );
+    });
+
   const accountBlock = (compact) =>
     account && (
       <div className={`shrink-0 border-t border-line p-3 ${compact ? "flex flex-col items-center gap-2" : ""}`}>
@@ -123,7 +144,7 @@ export function AppShell({
           </NavLinkComponent>
         </div>
         <nav aria-label="Main" className="flex flex-1 flex-col gap-1 overflow-y-auto px-3 py-2">
-          {navItems.map((item) => navLink(item, { compact: collapsed }))}
+          {navList({ compact: collapsed })}
         </nav>
         <div className="px-3 pb-2">
           <button
@@ -171,7 +192,7 @@ export function AppShell({
               </button>
             </div>
             <nav aria-label="Main" className="flex flex-1 flex-col gap-1 overflow-y-auto px-3 py-2">
-              {navItems.map((item) => navLink(item, { onNavigate: () => setDrawerOpen(false) }))}
+              {navList({ onNavigate: () => setDrawerOpen(false) })}
             </nav>
             {accountBlock(false)}
           </div>

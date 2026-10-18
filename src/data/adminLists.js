@@ -31,6 +31,8 @@ export const adminLists = {
   paymentOrders: ({ queue, page, view }) => withView("/admin/payments/orders", { queue, page }, view),
   // Queue counts, computed on the server (never by downloading every payment).
   paymentSummary: () => backendApi.get("/admin/payments/summary", { auth: true }),
+  // What needs a person now — issuance, top-ups, payments, KYC — counted as each queue counts it.
+  operationsSummary: () => backendApi.get("/admin/operations/summary", { auth: true }),
   auditLog: ({ action, page }) => get("/admin/audit", { action, page }),
   notificationJobs: ({ status, page }) => get("/admin/notification-jobs", { status, page }),
   operations: ({ status, page }) => get("/admin/provider/operations", { status, page }),

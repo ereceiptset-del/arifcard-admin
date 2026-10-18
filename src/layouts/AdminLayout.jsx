@@ -1,6 +1,6 @@
 import { useCallback, useState } from "react";
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
-import { LayoutDashboard, Users, ShieldCheck, CreditCard, Banknote, ArrowLeftRight, Bell, ScrollText, Settings, Search, BadgeCheck, Percent } from "lucide-react";
+import { LayoutDashboard, Users, ShieldCheck, CreditCard, Banknote, ArrowLeftRight, Bell, ScrollText, Settings, Search, BadgeCheck, Percent, ArrowUpFromLine } from "lucide-react";
 import { AppShell, StatusPill } from "@addiscard/ui";
 import { adminService } from "@addiscard/services";
 import { useAuth } from "../context/AuthContext";
@@ -18,18 +18,20 @@ import { useAsync } from "../hooks/useAsync.js";
  * endpoint, which card issuer environment this backend talks to — so no
  * one mistakes the sandbox for production.
  */
+// Grouped by the work an operator does; each group has a label in the rail.
 const NAV_ITEMS = [
   { label: "Overview", to: "/", icon: LayoutDashboard, end: true },
-  { label: "Customers", to: "/customers", icon: Users },
-  { label: "KYC verification", to: "/kyc", icon: ShieldCheck },
-  { label: "Payments", to: "/payments", icon: Banknote },
-  { label: "Transactions", to: "/transactions", icon: ArrowLeftRight },
-  { label: "Card issuance", to: "/card-issuance", icon: BadgeCheck },
-  { label: "Card operations", to: "/cards", icon: CreditCard },
-  { label: "Pricing", to: "/pricing", icon: Percent },
-  { label: "Notifications", to: "/notifications", icon: Bell },
-  { label: "Audit logs", to: "/audit", icon: ScrollText },
-  { label: "Settings", to: "/settings", icon: Settings },
+  { section: "Customers & verification", label: "Customers", to: "/customers", icon: Users },
+  { section: "Customers & verification", label: "KYC verification", to: "/kyc", icon: ShieldCheck },
+  { section: "Money & payments", label: "Payments", to: "/payments", icon: Banknote },
+  { section: "Money & payments", label: "Top-up requests", to: "/top-ups", icon: ArrowUpFromLine },
+  { section: "Cards", label: "Card issuance", to: "/card-issuance", icon: BadgeCheck },
+  { section: "Cards", label: "Card operations", to: "/cards", icon: CreditCard },
+  { section: "Cards", label: "Transactions", to: "/transactions", icon: ArrowLeftRight },
+  { section: "Operations", label: "Notifications", to: "/notifications", icon: Bell },
+  { section: "Operations", label: "Audit logs", to: "/audit", icon: ScrollText },
+  { section: "Settings", label: "Pricing", to: "/pricing", icon: Percent },
+  { section: "Settings", label: "Settings", to: "/settings", icon: Settings },
 ];
 
 /** The signed-in staff member's role, as the backend reports it. */
@@ -55,14 +57,18 @@ export default function AdminLayout() {
     navigate("/login", { replace: true });
   };
 
+  // Which card issuer and environment this backend uses, from configuration
+  // only. A test environment is always marked, so no one mistakes it for live.
   const provider = settings.data?.configuration?.cardProvider;
-  const environment = issuerEnvironment(provider);
+  const environment = provider?.environment || issuerEnvironment(provider);
+  const isTest = environment === "sandbox" || environment === "test";
+  const issuerName = provider?.provider || "card issuer";
   const issuerChip = settings.data
     ? provider?.status === "configured"
-      ? { tone: environment === "sandbox" || environment === "test" ? "warning" : "success", label: `Issuer: Codego${environment ? `, ${environment}` : ""}` }
-      : { tone: "neutral", label: "Issuer: not configured" }
+      ? { tone: isTest ? "warning" : "success", label: `Card issuer: ${issuerName}${environment ? `, ${environment}` : ""}` }
+      : { tone: "neutral", label: `Card issuer: ${issuerName}, not configured` }
     : settings.error
-      ? { tone: "neutral", label: "Issuer: unknown" }
+      ? { tone: "neutral", label: "Card issuer: unknown" }
       : null;
 
   const search = (event) => {
@@ -104,6 +110,14 @@ export default function AdminLayout() {
             <span className="hidden lg:inline-flex">
               <StatusPill tone={issuerChip.tone} icon={null}>
                 {issuerChip.label}
+              </StatusPill>
+            </span>
+          )}
+          {/* Small screens: the environment alone, never hidden. */}
+          {isTest && (
+            <span className="inline-flex lg:hidden">
+              <StatusPill tone="warning" icon={null}>
+                Sandbox
               </StatusPill>
             </span>
           )}

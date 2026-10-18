@@ -3,7 +3,7 @@ import { ArrowUpFromLine } from "lucide-react";
 import { Panel, StatusPill, Button, Dialog, Skeleton, ErrorState, EmptyState, useToast, formatDateTime, formatMoney } from "@addiscard/ui";
 import { ApiError } from "@addiscard/services";
 import { useAsync } from "../../hooks/useAsync.js";
-import { bitnobAdmin, FUNDING_STATUS } from "../../data/bitnobAdmin.js";
+import { bitnobAdmin, FUNDING_STATUS, TOPUP_BUCKETS } from "../../data/bitnobAdmin.js";
 import { rateText } from "../../data/pricingAdmin.js";
 
 /**
@@ -21,13 +21,15 @@ const PAYMENT_LABEL = {
   VERIFIED: ["success", "Verified"],
 };
 
-export default function TopupRequests() {
+export default function TopupRequests({ bucket = null, onBucket = null }) {
   const toast = useToast();
   const load = useCallback(() => bitnobAdmin.topupRequests(), []);
   const { data, error, loading, reload } = useAsync(load, []);
   const [pending, setPending] = useState(null);
   const [busy, setBusy] = useState(false);
-  const rows = data?.requests || [];
+  const all = data?.requests || [];
+  const rows = bucket ? all.filter((r) => r.bucket === bucket) : all;
+  const groupLabel = TOPUP_BUCKETS.find((b) => b.value === bucket)?.label;
   const canSend = data?.provider?.available !== false;
 
   const go = async () => {
@@ -46,10 +48,33 @@ export default function TopupRequests() {
   };
 
   return (
-    <Panel title={`Card top-up requests (${rows.length})`} padded={rows.length === 0}>
-      {loading && !data && <Skeleton className="h-24 w-full" />}
-      {error && !data && <ErrorState title="We couldn't load top-up requests" error={error} onRetry={reload} />}
-      {data && rows.length === 0 && <EmptyState compact icon={ArrowUpFromLine} title="Top-ups appear here when a customer accepts a price and pays." />}
+    <Panel title={`${groupLabel || "All top-up requests"} (${rows.length})`} padded={false}>
+      {onBucket && data && (
+        <div role="group" aria-label="Top-up queue" className="flex gap-2 overflow-x-auto border-b border-line px-4 py-3 sm:px-6">
+          {[{ value: null, label: "All" }, ...TOPUP_BUCKETS].map((b) => {
+            const n = b.value ? all.filter((r) => r.bucket === b.value).length : all.length;
+            return (
+              <button
+                key={b.label}
+                type="button"
+                aria-pressed={bucket === b.value}
+                onClick={() => onBucket(b.value)}
+                className={`min-h-11 shrink-0 rounded-full border px-4 text-small font-medium ${
+                  bucket === b.value ? "border-accent bg-accent-soft text-accent-ink" : "border-line-strong bg-surface-1 text-ink-soft hover:bg-surface-2"
+                }`}
+              >
+                {b.label}
+                <span className="ml-1.5 tabular-nums text-ink-muted">{n}</span>
+              </button>
+            );
+          })}
+        </div>
+      )}
+      {loading && !data && <div className="p-4 sm:p-6"><Skeleton className="h-24 w-full" /></div>}
+      {error && !data && <div className="p-4 sm:p-6"><ErrorState title="We couldn't load top-up requests" error={error} onRetry={reload} /></div>}
+      {data && rows.length === 0 && (
+        <EmptyState compact icon={ArrowUpFromLine} title={bucket ? "Nothing in this group." : "Top-ups appear here when a customer accepts a price and pays."} />
+      )}
       {data && data.provider && !data.provider.available && rows.length > 0 && (
         <p className="px-4 pt-3 text-caption text-ink-muted sm:px-6">Sending is unavailable from this backend: {data.provider.message}</p>
       )}
@@ -72,7 +97,7 @@ export default function TopupRequests() {
                   {instr && <StatusPill tone={fundTone}>{fundLabel}</StatusPill>}
                 </div>
                 <dl className="grid gap-x-6 gap-y-1 text-small sm:grid-cols-2">
-                  <Row label="Card" value={r.cardLast4 ? `Visa •••• ${r.cardLast4}` : "—"} />
+                  <Row label="Card" value={r.cardLast4 ? `Card •••• ${r.cardLast4}` : "—"} />
                   <Row label="Payment" value={`${r.reference || r.intentId}${r.createdAt ? ` · ${formatDateTime(r.createdAt)}` : ""}`} />
                   <Row label="Card credit" value={formatMoney(q.usdCents, "USD")} strong />
                   <Row label="Approved rate" value={q.etbPerUsd ? `${rateText(q.etbPerUsd)} ETB/USD` : "—"} />

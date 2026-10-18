@@ -16,6 +16,7 @@ const OverviewPage = lazy(() => import("../pages/admin/OverviewPage"));
 const CustomersPage = lazy(() => import("../pages/admin/CustomersPage"));
 const CardOperationsPage = lazy(() => import("../pages/admin/CardOperationsPage"));
 const CardIssuancePage = lazy(() => import("../pages/admin/CardIssuancePage"));
+const TopupsPage = lazy(() => import("../pages/admin/TopupsPage"));
 const PaymentsPage = lazy(() => import("../pages/admin/PaymentsPage"));
 const SettingsPage = lazy(() => import("../pages/admin/SettingsPage"));
 const PricingPage = lazy(() => import("../pages/admin/PricingPage"));
@@ -71,6 +72,7 @@ function AppRoutes() {
           <Route path="customers" element={<CustomersPage />} />
           <Route path="cards" element={<CardOperationsPage />} />
           <Route path="card-issuance" element={<CardIssuancePage />} />
+          <Route path="top-ups" element={<TopupsPage />} />
           <Route path="payments" element={<PaymentsPage />} />
           <Route path="kyc" element={<KycQueuePage />} />
           <Route path="kyc/:caseId" element={<KycCasePage />} />
