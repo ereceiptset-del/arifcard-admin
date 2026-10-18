@@ -41,13 +41,31 @@ import { RecordActions } from "../../components/admin/RecordActions.jsx";
  * identify them without this page becoming a copy of everyone's receipts.
  */
 
+/*
+ * Receipt queues. Statuses, plus cross-cutting queues the server filters by
+ * reason: delayed (bank unreachable, retried automatically), late or outside
+ * the payment window, ownership unconfirmed, duplicate bank transaction.
+ * `count` names where the number comes from in the server's summary.
+ */
 const FILTERS = [
   { value: "all", label: "All" },
-  { value: "REQUIRES_REVIEW", label: "Needs a person" },
-  { value: "VERIFYING", label: "Verifying" },
-  { value: "REJECTED_EVIDENCE", label: "Rejected" },
+  { value: "REQUIRES_REVIEW", label: "Needs a person", count: ["payments", "REQUIRES_REVIEW"] },
+  { value: "VERIFYING", label: "Verifying", count: ["payments", "VERIFYING"] },
+  { value: "DELAYED", label: "Verification delayed", count: ["receipts", "DELAYED"] },
+  { value: "LATE", label: "Late or outside window", count: ["receipts", "LATE"] },
+  { value: "OWNERSHIP", label: "Ownership unconfirmed", count: ["receipts", "OWNERSHIP"] },
+  { value: "DUPLICATE", label: "Duplicate transaction", count: ["receipts", "DUPLICATE"] },
+  { value: "REJECTED_EVIDENCE", label: "Rejected", count: ["payments", "REJECTED_EVIDENCE"] },
   { value: "VERIFIED", label: "Verified" },
 ];
+
+/* Orders with no receipt yet: the customer has not sent the transaction reference. */
+const ORDER_FILTERS = [
+  { value: "AWAITING_REFERENCE", label: "Awaiting reference", count: ["orders", "AWAITING_REFERENCE"] },
+  { value: "CLAIMED_PAID", label: "Says paid, no reference", count: ["orders", "CLAIMED_PAID"] },
+  { value: "REFERENCE_OVERDUE", label: "Reference overdue", count: ["orders", "REFERENCE_OVERDUE"] },
+];
+const PURPOSE = { CARD_CREATION: "New card", CARD_TOPUP: "Top-up", ADD_FUNDS: "Add money" };
 
 // Archiving a payment hides it and its receipts from the active queue; Archived shows them.
 const VIEWS = [
@@ -99,9 +117,47 @@ export default function PaymentsPage() {
 
   const [openId, setOpenId] = useState(null);
   const [page, setPage] = usePage(`${status}|${view}`);
-  const load = useCallback(() => adminLists.paymentClaims({ status, page, view }), [status, page, view]);
+  const ordersQueue = ORDER_FILTERS.some((filter) => filter.value === status);
+  const load = useCallback(
+    () => (ordersQueue ? adminLists.paymentOrders({ queue: status, page, view }) : adminLists.paymentClaims({ status, page, view })),
+    [ordersQueue, status, page, view]
+  );
   const { data, error, loading, reload } = useAsync(load, [status, page, view]);
-  const claims = data?.claims || [];
+  const claims = ordersQueue ? [] : data?.claims || [];
+  const orders = ordersQueue ? data?.orders || [] : [];
+  const summaryLoad = useCallback(() => adminLists.paymentSummary(), []);
+  const { data: summaryData } = useAsync(summaryLoad, []);
+  const countFor = (filter) => {
+    const value = filter.count ? summaryData?.summary?.[filter.count[0]]?.[filter.count[1]] : null;
+    return typeof value === "number" ? value : null;
+  };
+
+  const orderColumns = [
+    {
+      key: "order",
+      header: "Order",
+      render: (row) => (
+        <span className="block min-w-0">
+          <span className="block truncate">{row.reference}</span>
+          <span className="block truncate text-caption font-normal text-ink-muted">
+            {PURPOSE[row.purpose] || row.purpose}, {row.method}
+          </span>
+        </span>
+      ),
+    },
+    { key: "customer", header: "Customer", hideBelow: "md", render: (row) => <span className="block max-w-[14rem] truncate">{row.owner?.email || row.owner?.name || row.owner?.uid}</span> },
+    { key: "amount", header: "Total", align: "right", render: (row) => etb(row.amountMinor, row.currency) },
+    { key: "created", header: "Created", hideBelow: "lg", render: (row) => formatDateTime(row.createdAt) },
+    { key: "paymentDeadline", header: "Pay by", hideBelow: "lg", render: (row) => (row.paymentDeadline ? formatDateTime(row.paymentDeadline) : "Not recorded") },
+    { key: "referenceDeadline", header: "Reference by", render: (row) => (row.referenceDeadline ? formatDateTime(row.referenceDeadline) : "Not recorded") },
+    {
+      key: "said",
+      header: "Customer says paid",
+      hideBelow: "md",
+      render: (row) => (row.customerClaimedPaid ? formatDateTime(row.customerClaimedPaidAt) || "Yes" : "No"),
+    },
+    { key: "reminders", header: "Reminders", hideBelow: "lg", align: "right", render: (row) => row.remindersSent },
+  ];
 
   const columns = [
     {
@@ -182,21 +238,33 @@ export default function PaymentsPage() {
         ))}
       </div>
 
-      <div role="group" aria-label="Status" className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1">
-        {FILTERS.map((filter) => (
-          <button
-            key={filter.value}
-            type="button"
-            aria-pressed={status === filter.value}
-            onClick={() => setStatus(filter.value)}
-            className={`min-h-11 shrink-0 rounded-full border px-4 text-small font-medium ${
-              status === filter.value ? "border-accent bg-accent-soft text-accent-ink" : "border-line-strong bg-surface-1 text-ink-soft hover:bg-surface-2"
-            }`}
-          >
-            {filter.label}
-          </button>
-        ))}
-      </div>
+      {[
+        { label: "Receipts", filters: FILTERS },
+        { label: "Orders waiting for a receipt", filters: ORDER_FILTERS },
+      ].map((group) => (
+        <div key={group.label} className="flex flex-col gap-2">
+          <p className="text-small font-medium text-ink-muted">{group.label}</p>
+          <div role="group" aria-label={group.label} className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1">
+            {group.filters.map((filter) => {
+              const count = countFor(filter);
+              return (
+                <button
+                  key={filter.value}
+                  type="button"
+                  aria-pressed={status === filter.value}
+                  onClick={() => setStatus(filter.value)}
+                  className={`min-h-11 shrink-0 rounded-full border px-4 text-small font-medium ${
+                    status === filter.value ? "border-accent bg-accent-soft text-accent-ink" : "border-line-strong bg-surface-1 text-ink-soft hover:bg-surface-2"
+                  }`}
+                >
+                  {filter.label}
+                  {count !== null ? <span className="ml-1.5 tabular-nums text-ink-muted">{count}</span> : null}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      ))}
 
       <Panel padded={false}>
         {loading && (
@@ -211,10 +279,14 @@ export default function PaymentsPage() {
             <ErrorState title="We couldn't load payment claims" error={error} onRetry={reload} />
           </div>
         )}
-        {!loading && !error && claims.length === 0 && (
+        {!loading && !error && !ordersQueue && claims.length === 0 && (
           <EmptyState headingLevel={2} icon={Banknote} title="No claims to show" description="Receipts customers submit appear here, whatever the outcome." />
         )}
-        {!loading && !error && claims.length > 0 && <Table caption="Payment claims" columns={columns} rows={claims} onRowClick={(row) => setOpenId(row.id)} />}
+        {!loading && !error && !ordersQueue && claims.length > 0 && <Table caption="Payment claims" columns={columns} rows={claims} onRowClick={(row) => setOpenId(row.id)} />}
+        {!loading && !error && ordersQueue && orders.length === 0 && (
+          <EmptyState headingLevel={2} icon={Banknote} title="No orders in this queue" description="Payment orders whose customer hasn't sent a transaction reference appear here." />
+        )}
+        {!loading && !error && ordersQueue && orders.length > 0 && <Table caption="Payment orders waiting for a receipt" columns={orderColumns} rows={orders} />}
         {!error && <PageNav pagination={data?.pagination} onPage={setPage} loading={loading} />}
       </Panel>
 

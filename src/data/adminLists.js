@@ -27,6 +27,10 @@ export const adminLists = {
   customers: ({ q, kycStatus, page }) => get("/admin/customers", { q, kycStatus, page }),
   kycCases: ({ status, q, page, view }) => withView("/admin/kyc/cases", { status, q, page }, view),
   paymentClaims: ({ status, page, view }) => withView("/admin/payments/claims", { status, page }, view),
+  // Orders still waiting for the customer's reference (AWAITING_REFERENCE, CLAIMED_PAID, REFERENCE_OVERDUE).
+  paymentOrders: ({ queue, page, view }) => withView("/admin/payments/orders", { queue, page }, view),
+  // Queue counts, computed on the server (never by downloading every payment).
+  paymentSummary: () => backendApi.get("/admin/payments/summary", { auth: true }),
   auditLog: ({ action, page }) => get("/admin/audit", { action, page }),
   notificationJobs: ({ status, page }) => get("/admin/notification-jobs", { status, page }),
   operations: ({ status, page }) => get("/admin/provider/operations", { status, page }),
