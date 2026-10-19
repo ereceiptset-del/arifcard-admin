@@ -4,6 +4,13 @@ const FOCUSABLE =
   'a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
 /**
+ * Open traps, innermost last. A dialog opened from a drawer stacks two
+ * traps, each with its own document listener; only the top one may act on
+ * a key, or Escape closes both and Tab is wrapped by the drawer's bounds.
+ */
+const openTraps = [];
+
+/**
  * For modal surfaces (Dialog, Drawer): while `open`, Escape closes, Tab is
  * trapped inside `ref`, body scroll is locked, focus moves in on open and
  * returns to whatever had it before on close.
@@ -18,11 +25,14 @@ export function useFocusTrap(open, onClose, ref) {
   useEffect(() => {
     if (!open) return undefined;
 
+    const trap = {};
+    openTraps.push(trap);
     const previouslyFocused = document.activeElement;
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
 
     const onKeyDown = (event) => {
+      if (openTraps[openTraps.length - 1] !== trap) return;
       if (event.key === "Escape") {
         event.stopPropagation();
         onCloseRef.current?.();
@@ -36,7 +46,11 @@ export function useFocusTrap(open, onClose, ref) {
       }
       const first = focusables[0];
       const last = focusables[focusables.length - 1];
-      if (event.shiftKey && document.activeElement === first) {
+      // Focus that has slipped outside (a click behind the scrim) comes back in.
+      if (!ref.current.contains(document.activeElement)) {
+        event.preventDefault();
+        (event.shiftKey ? last : first).focus();
+      } else if (event.shiftKey && document.activeElement === first) {
         event.preventDefault();
         last.focus();
       } else if (!event.shiftKey && document.activeElement === last) {
@@ -52,6 +66,7 @@ export function useFocusTrap(open, onClose, ref) {
     }, 0);
 
     return () => {
+      openTraps.splice(openTraps.indexOf(trap), 1);
       document.removeEventListener("keydown", onKeyDown);
       document.body.style.overflow = previousOverflow;
       clearTimeout(focusTimer);
