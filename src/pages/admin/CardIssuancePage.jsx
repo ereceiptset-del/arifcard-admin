@@ -9,7 +9,7 @@ import { PageNav } from "../../components/admin/PageNav.jsx";
 import { bitnobAdmin, ISSUANCE_LABEL, ISSUANCE_BLOCKER_LABEL } from "../../data/bitnobAdmin.js";
 import CardIssuanceReview from "../../components/admin/CardIssuanceReview.jsx";
 
-/** "robelamare75@gmail.com" → "robe••••@gmail.com" (the row needs to recognise, not to contact). */
+/** "someone.example@example.com" → "some••••@example.com" (the row needs to recognise, not to contact). */
 const maskEmail = (email) => {
   const [local, domain] = String(email || "").split("@");
   return local && domain ? `${local.slice(0, Math.min(4, Math.max(1, local.length - 2)))}••••@${domain}` : null;

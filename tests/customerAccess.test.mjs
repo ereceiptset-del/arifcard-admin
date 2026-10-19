@@ -25,16 +25,36 @@ test("every change sends the version the screen showed, and a reason", () => {
 test("actions follow the server: disable only when allowed, re-enable only when allowed, administrators only", () => {
   assert.match(component, /account\.actions\?\.disable && \(/);
   assert.match(component, /account\.actions\?\.enable && \(/);
-  assert.equal(component.match(/disabled=\{!isAdmin\}/g)?.length, 3, "disable, re-enable and the deletion check");
+  assert.equal(component.match(/disabled=\{!isAdmin\}/g)?.length, 2, "disable and re-enable");
   assert.match(component, /\["owner", "admin"\]\.includes\(user\?\.staffRole\)/);
 });
 
-test("permanent deletion is a read-only check: no delete call, no delete button, no typed confirmation", () => {
-  assert.ok(!/\/delete|method: "DELETE"|backendApi\.delete/.test(data), "no deletion endpoint in the data module");
+test("permanent deletion: preview and requests for administrators; execution offered only when the server says it can start, to the owner", () => {
+  const panel = read("src/components/admin/DeletionPanel.jsx");
+  assert.ok(!/method: "DELETE"|backendApi\.delete/.test(data), "no HTTP DELETE of a customer");
   assert.match(data, /deletionPreview: \(uid\) => backendApi\.post\(`\$\{base\(uid\)\}\/deletion-preview`/);
-  assert.ok(!/Permanently delete|typed|"DELETE"/.test(component), "no delete action in the screen");
-  assert.match(component, /Danger zone: permanent deletion/);
-  assert.match(component, /Nothing was changed\./);
+  assert.match(data, /executeDeletion: \(uid, body\) => backendApi\.post\(`\$\{base\(uid\)\}\/deletion\/execute`/);
+  // The run button exists only behind the server's verdict and the owner.
+  assert.match(panel, /const canExecute = preview\?\.canStartDeletion === true && isOwner;/);
+  assert.match(panel, /\{canExecute && \(/);
+  assert.match(panel, /Permanent deletion is not yet enabled\. This preview identifies records and policy requirements that must be resolved first\./);
+  assert.match(panel, /Danger zone: permanent deletion/);
+  assert.match(panel, /Nothing was changed\./);
+  assert.match(panel, /typed === DELETE_CUSTOMER_PHRASE/);
+  assert.match(data, /export const DELETE_CUSTOMER_PHRASE = "DELETE CUSTOMER";/);
+  assert.ok(!/Permanently delete|"DELETE"/.test(component), "nothing irreversible in the access section itself");
+});
+
+test("hard suspension: owner only, the brief's consequences, reason, password and the typed phrase", () => {
+  const security = read("src/components/admin/SecurityActions.jsx");
+  assert.equal(security.match(/disabled=\{!isOwner\}/g)?.length, 2, "suspend and lift");
+  for (const line of ["disable Firebase Authentication access;", "revoke active sessions;", "block all Arifcard customer services;", "preserve financial, card, provider and audit history.", "reverse payments;", "close cards automatically;", "delete customer data."]) {
+    assert.ok(security.includes(line), line);
+  }
+  assert.match(security, /typed === HARD_SUSPEND_PHRASE/);
+  assert.match(security, /typed === LIFT_SUSPENSION_PHRASE/);
+  assert.match(data, /export const HARD_SUSPEND_PHRASE = "SUSPEND CUSTOMER";/);
+  assert.match(security, /type="password" autoComplete="current-password"/);
 });
 
 test("a stale or out-of-state refusal is explained and the panel re-reads; focus returns to the section", () => {

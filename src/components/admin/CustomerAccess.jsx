@@ -1,10 +1,12 @@
 import { useCallback, useRef, useState } from "react";
-import { ShieldAlert, ShieldCheck, ShieldOff, SearchCheck, Info } from "lucide-react";
+import { ShieldAlert, ShieldCheck, ShieldOff, Info } from "lucide-react";
 import { Button, Dialog, TextArea, StatusPill, Skeleton, ErrorState, useToast, formatDateTime } from "@addiscard/ui";
 import { ApiError } from "@addiscard/services";
 import { useAuth } from "../../context/AuthContext";
 import { useAsync } from "../../hooks/useAsync.js";
-import { customerAccessApi, ACCOUNT_STATUS_LABEL, ACCOUNT_STATUS_TONE, DEPENDENCY_LABEL } from "../../data/customerAccess.js";
+import { customerAccessApi, ACCOUNT_STATUS_LABEL, ACCOUNT_STATUS_TONE } from "../../data/customerAccess.js";
+import SecurityActions from "./SecurityActions.jsx";
+import DeletionPanel from "./DeletionPanel.jsx";
 
 /**
  * User management for one customer: whether they can use Arifcard, and
@@ -16,21 +18,26 @@ import { customerAccessApi, ACCOUNT_STATUS_LABEL, ACCOUNT_STATUS_TONE, DEPENDENC
  *                         never the reason.
  *   Re-enable           — restores access only; re-runs nothing.
  *
- * Permanent deletion is a separate, read-only eligibility check. There is
- * no delete button: deletion is not enabled until a retention and
- * de-identification policy is approved, and the backend has no endpoint
- * that would perform it. The backend re-checks role, state and version on
- * every call; these dialogs are explanation, not security.
+ * Security actions (hard suspension and lifting it) are the owner's, in
+ * their own section (SecurityActions.jsx).
+ *
+ * Permanent deletion lives in its own danger zone (DeletionPanel.jsx):
+ * requests and an eligibility preview everywhere; the staged purge is
+ * offered only where the server says it can start (an approved retention
+ * policy and execution enabled — the local emulators only today). The
+ * backend re-checks role, state and version on every call; these dialogs
+ * are explanation, not security.
  */
 
 const MIN_REASON = 10;
 const errorText = (e, fallback) => (e instanceof ApiError ? e.message : fallback);
 
-const AUTH_LABEL = { available: "Can sign in", disabled: "Disabled in Firebase Authentication", "awaiting email verification": "Email not confirmed yet" };
+const AUTH_LABEL = { available: "Can sign in", disabled: "Disabled in Firebase Authentication", "awaiting email verification": "Email not confirmed yet", deleted: "Sign-in account deleted" };
 
 export default function CustomerAccess({ uid, summary, onChanged }) {
   const { user } = useAuth();
   const isAdmin = Boolean(user?.isOwner) || ["owner", "admin"].includes(user?.staffRole);
+  const isOwner = Boolean(user?.isOwner);
   const load = useCallback(() => customerAccessApi.account(uid), [uid]);
   const { data, error, loading, reload, setData } = useAsync(load, [uid]);
   const account = data?.account;
@@ -95,7 +102,9 @@ export default function CustomerAccess({ uid, summary, onChanged }) {
         </div>
       </section>
 
-      <DeletionCheck uid={uid} isAdmin={isAdmin} />
+      <SecurityActions uid={uid} summary={summary} account={account} isOwner={isOwner} onDone={done} />
+
+      <DeletionPanel uid={uid} summary={summary} account={account} isAdmin={isAdmin} isOwner={isOwner} onDone={done} />
 
       {dialog && (
         <AccessDialog kind={dialog} uid={uid} summary={summary} expectedVersion={account.version} onClose={() => setDialog(null)} onDone={done} />
@@ -194,88 +203,6 @@ function AccessDialog({ kind, uid, summary, expectedVersion, onClose, onDone }) 
         )}
       </div>
     </Dialog>
-  );
-}
-
-/** Danger zone: a read-only check. It never deletes, and there is no button that would. */
-function DeletionCheck({ uid, isAdmin }) {
-  const [preview, setPreview] = useState(null);
-  const [busy, setBusy] = useState(false);
-  const [problem, setProblem] = useState(null);
-
-  const check = async () => {
-    setBusy(true);
-    setProblem(null);
-    try {
-      setPreview((await customerAccessApi.deletionPreview(uid)).preview);
-    } catch (e) {
-      setProblem(errorText(e, "The eligibility check didn't load. Nothing was changed."));
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  return (
-    <section aria-labelledby="danger-heading" className="rounded-control border border-danger p-4">
-      <h3 id="danger-heading" className="text-h3 text-danger">
-        Danger zone: permanent deletion
-      </h3>
-      <p className="mt-1 text-small text-ink-soft">
-        Permanent deletion is not enabled. Checking eligibility only reads this customer's records and lists what would block deletion. It changes nothing.
-      </p>
-      <Button className="mt-3" variant="secondary" icon={SearchCheck} loading={busy} disabled={!isAdmin} disabledReason="Only an administrator can check deletion eligibility." onClick={check}>
-        Check deletion eligibility
-      </Button>
-      {problem && (
-        <p role="alert" className="mt-3 text-small text-danger">
-          {problem}
-        </p>
-      )}
-      {preview && (
-        <div className="mt-4 flex flex-col gap-4" aria-live="polite">
-          <p role="status" className="rounded-control border border-line bg-surface-2 px-3 py-2 text-small font-medium text-ink">
-            {preview.canStartDeletion ? "Eligible for deletion." : "Not eligible: deletion cannot start."} Nothing was changed.
-          </p>
-          <div>
-            <p className="text-small font-medium text-ink">Blocked by</p>
-            <ul className="mt-1.5 flex flex-col gap-1.5">
-              {preview.blockers.map((b) => (
-                <li key={b.code} className="flex gap-2 text-small text-ink">
-                  <ShieldAlert size={16} aria-hidden className="mt-0.5 shrink-0 text-danger" />
-                  {b.message}
-                </li>
-              ))}
-            </ul>
-          </div>
-          <div>
-            <p className="text-small font-medium text-ink">Records found</p>
-            <dl className="mt-1.5 divide-y divide-line rounded-control border border-line">
-              {Object.entries(preview.dependencies).map(([key, value]) => (
-                <Row key={key} label={DEPENDENCY_LABEL[key] || key} value={value == null ? "Unavailable" : String(value)} />
-              ))}
-            </dl>
-          </div>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div>
-              <p className="text-small font-medium text-ink">An approved deletion would</p>
-              <ul className="mt-1.5 list-disc space-y-1 pl-5 text-small text-ink-soft">
-                {preview.plannedActions.map((a) => (
-                  <li key={a}>{a}</li>
-                ))}
-              </ul>
-            </div>
-            <div>
-              <p className="text-small font-medium text-ink">It would never</p>
-              <ul className="mt-1.5 list-disc space-y-1 pl-5 text-small text-ink-soft">
-                {preview.willNot.map((a) => (
-                  <li key={a}>{a}</li>
-                ))}
-              </ul>
-            </div>
-          </div>
-        </div>
-      )}
-    </section>
   );
 }
 

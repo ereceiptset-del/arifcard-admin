@@ -30,7 +30,7 @@ const role = params.get("role") || "admin";
 const USER =
   role === "customer"
     ? { uid: "visual-customer", email: "test.customer@example.test", fullName: "Test Customer", emailVerified: true, isStaff: false, staffRole: null, isOwner: false }
-    : { uid: "visual-staff", email: "test.staff@example.test", fullName: "Test Staff", emailVerified: true, isStaff: true, staffRole: role, isOwner: false };
+    : { uid: "visual-staff", email: "test.staff@example.test", fullName: "Test Staff", emailVerified: true, isStaff: true, staffRole: role, isOwner: role === "owner" };
 
 const metric = (value) => ({ available: true, value });
 const unavailable = (reason) => ({ available: false, reason });
@@ -280,7 +280,9 @@ const ISSUANCE = {
 const PAYMENT_SUMMARY = { orders: { AWAITING_REFERENCE: 3, CLAIMED_PAID: 1, REFERENCE_OVERDUE: 2 }, payments: { VERIFYING: 1, REQUIRES_REVIEW: 2, REJECTED_EVIDENCE: 4, VERIFIED: 37 }, receipts: { DELAYED: 1, LATE: 1, OWNERSHIP: 1, DUPLICATE: 0 } };
 
 // Account access (synthetic): &account=disabled|deleting starts the customer in that state.
-const ACCOUNT_START = { disabled: "TEMPORARILY_DISABLED", deleting: "DELETION_IN_PROGRESS" }[params.get("account")] || "ACTIVE";
+const ACCOUNT_START = { disabled: "TEMPORARILY_DISABLED", deleting: "DELETION_IN_PROGRESS", suspended: "HARD_SUSPENDED", requested: "DELETION_REQUESTED" }[params.get("account")] || "ACTIVE";
+/** The harness's synthetic operator password for step-up dialogs (never a real credential). */
+const HARNESS_PASSWORD = "harness-password";
 const account = {
   uid: "visual-customer",
   accountStatus: ACCOUNT_START,
@@ -294,32 +296,126 @@ const account = {
   enabledAt: null,
   enabledBy: null,
 };
-const accountView = () => ({ ...account, arifcardAccess: account.accountStatus === "ACTIVE" ? "active" : "restricted", actions: { disable: account.accountStatus === "ACTIVE", enable: account.accountStatus === "TEMPORARILY_DISABLED", checkDeletion: true } });
+const SUSPENDABLE = ["ACTIVE", "TEMPORARILY_DISABLED", "DELETION_REQUESTED", "DELETION_BLOCKED"];
+const accountView = () => ({
+  ...account,
+  firebaseAuth: account.accountStatus === "HARD_SUSPENDED" ? "disabled" : "available",
+  arifcardAccess: account.accountStatus === "ACTIVE" ? "active" : "restricted",
+  actions: {
+    disable: account.accountStatus === "ACTIVE",
+    enable: account.accountStatus === "TEMPORARILY_DISABLED",
+    hardSuspend: SUSPENDABLE.includes(account.accountStatus),
+    liftSuspension: account.accountStatus === "HARD_SUSPENDED",
+    requestDeletion: ["ACTIVE", "TEMPORARILY_DISABLED"].includes(account.accountStatus),
+    reviewDeletion: ["DELETION_REQUESTED", "DELETION_BLOCKED"].includes(account.accountStatus),
+    cancelDeletion: ["DELETION_REQUESTED", "DELETION_BLOCKED"].includes(account.accountStatus),
+    checkDeletion: true,
+  },
+  deletionOperationId: operation?.operationId || null,
+});
+const stepUp = (body, phrase) =>
+  body.confirm !== phrase
+    ? { __status: 400, message: `Type ${phrase} to confirm.`, code: "CONFIRMATION_REQUIRED" }
+    : body.password !== HARNESS_PASSWORD
+      ? { __status: 401, message: "That password isn't right.", code: "REAUTH_FAILED" }
+      : role !== "owner"
+        ? { __status: 403, message: "Only the account owner can take this security action.", code: "OWNER_REQUIRED" }
+        : null;
+const hardSuspend = (body) => {
+  const refused = stepUp(body, "SUSPEND CUSTOMER");
+  if (refused) return refused;
+  if (body.expectedVersion !== account.version) return { __status: 409, message: "This account changed since you opened it.", code: "STALE_ACCOUNT_STATE" };
+  Object.assign(account, { accountStatus: "HARD_SUSPENDED", version: account.version + 1, suspendedAt: new Date().toISOString(), suspendedBy: "Test Staff", suspensionReasonCode: body.reasonCode, suspensionReason: body.reason });
+  return { toStatus: "HARD_SUSPENDED", authDisabled: true, sessionsRevoked: true, account: accountView() };
+};
+const liftSuspension = (body) => {
+  const refused = stepUp(body, "LIFT SUSPENSION");
+  if (refused) return refused;
+  if (body.expectedVersion !== account.version) return { __status: 409, message: "This account changed since you opened it.", code: "STALE_ACCOUNT_STATE" };
+  Object.assign(account, { accountStatus: body.targetStatus, version: account.version + 1, suspendedAt: null, suspensionReasonCode: null, suspensionReason: null });
+  return { toStatus: body.targetStatus, authEnabled: true, sessionsRevoked: true, account: accountView() };
+};
 const transitionAccount = (to, body) => {
   if (body.expectedVersion !== account.version) return { __status: 409, message: "This account changed since you opened it.", code: "STALE_ACCOUNT_STATE" };
   const fromStatus = account.accountStatus;
   Object.assign(account, { accountStatus: to, version: account.version + 1 }, to === "ACTIVE" ? { enabledAt: new Date().toISOString(), enabledBy: "Test Staff" } : { disabledAt: new Date().toISOString(), disabledBy: "Test Staff", disabledReason: body.reason });
   return { fromStatus, toStatus: to, version: account.version, sessionsRevoked: true, account: accountView() };
 };
-const DELETION_PREVIEW = {
-  canStartDeletion: false,
-  accountStatus: "ACTIVE",
-  dependencies: { activeCards: 1, cards: 1, pendingPayments: 1, verifiedPayments: 2, topups: 1, transactions: 4, unresolvedProviderOperations: 0, identityCases: 1, identityFiles: 3 },
-  blockers: [
-    { code: "RETENTION_POLICY_NOT_APPROVED", message: "Permanent deletion is not enabled yet: the retention and de-identification policy for identity evidence and financial history has not been approved." },
-    { code: "ACTIVE_CARD_EXISTS", message: "The customer has a card that requires review first." },
-    { code: "OPEN_PAYMENT", message: "The customer has a payment that is not settled yet." },
-    { code: "FINANCIAL_HISTORY_RETAINED", message: "Verified payments and card history must be de-identified, not deleted, under the approved retention policy." },
-  ],
-  plannedActions: ["Block account access and revoke sessions", "Remove eligible profile and contact data", "Remove approved private identity files", "De-identify retained payment, card and transaction records", "Delete the Firebase Authentication user", "Keep a restricted deletion tombstone without personal data"],
-  willNot: ["reverse completed payments", "reverse card transactions", "erase provider-side history", "refund money", "cancel unresolved provider operations"],
+// &execution=on: as on the local emulators with an approved policy (the run button appears). Default: production.
+const EXECUTION_ON = params.get("execution") === "on";
+const POLICY_BLOCKERS = [
+  { code: "RETENTION_POLICY_NOT_APPROVED", message: "Permanent deletion is not enabled yet: the retention and de-identification policy has not been approved." },
+  { code: "RETENTION_DURATIONS_UNSET", message: "Retention periods not decided: identityDocumentRetentionDays, financialRecordRetentionDays, providerOperationRetentionDays, auditRetentionDays." },
+  { code: "KYC_FILE_POLICY_UNSET", message: "Whether private identity files are deleted at purge has not been decided." },
+  { code: "PROVIDER_POLICY_UNSET", message: "What happens to card-provider records at purge has not been decided." },
+];
+const deletionPreview = () => {
+  const blockers = [
+    ...(EXECUTION_ON ? [] : POLICY_BLOCKERS),
+    ...(account.accountStatus === "DELETION_REQUESTED" ? [] : [{ code: "DELETION_NOT_REQUESTED", message: "Record and review a deletion request first (the account must be in Deletion requested)." }]),
+  ];
+  return {
+    canStartDeletion: EXECUTION_ON && blockers.length === 0,
+    accountStatus: account.accountStatus,
+    policyVersion: EXECUTION_ON ? "synthetic-test-approved" : "2026-10-19.draft-1",
+    policyStatus: EXECUTION_ON ? "APPROVED" : "DRAFT",
+    execution: { enabled: EXECUTION_ON, reasons: EXECUTION_ON ? [] : ["PERMANENT_DELETION_EXECUTION_ENABLED is false", "production execution is not approved"] },
+    dependencies: { activeCards: 0, cards: 1, pendingPayments: 0, verifiedPayments: 2, topups: 1, transactions: 4, unresolvedProviderOperations: 0, identityCases: 1, identityFiles: 3, providerMappings: 1 },
+    blockers,
+    retained: { verifiedPayments: 2, transactions: 4, cards: 1, identityCases: 1, providerMappings: 1 },
+    plannedFiles: [],
+    plannedActions: [
+      "Set the account to Deletion in progress, revoke sessions and disable sign-in",
+      "Delete codes, notifications, outbox jobs, locks, unaccepted quotes and staff free text",
+      "Delete the private identity files (if the approved policy says so)",
+      "De-identify retained payment, receipt, card, transaction, provider and audit records",
+      "Delete the Firebase Authentication user",
+      "Keep a restricted tombstone without personal data",
+    ],
+    willNot: ["reverse completed payments", "reverse card transactions", "erase provider-side history", "refund money", "cancel unresolved provider operations"],
+  };
+};
+let operation = null;
+const deletionStep = (to, extra = {}) => {
+  Object.assign(account, { accountStatus: to, version: account.version + 1 }, extra);
+  return { toStatus: to, account: accountView(), preview: deletionPreview() };
 };
 
 const ROUTES = [
   [/^\/admin\/customers\/[^/]+\/account$/, () => ({ account: accountView() })],
   [/^\/admin\/customers\/[^/]+\/disable$/, (body) => transitionAccount("TEMPORARILY_DISABLED", body)],
   [/^\/admin\/customers\/[^/]+\/enable$/, (body) => transitionAccount("ACTIVE", body)],
-  [/^\/admin\/customers\/[^/]+\/deletion-preview$/, () => ({ preview: { ...DELETION_PREVIEW, accountStatus: account.accountStatus } })],
+  [/^\/admin\/customers\/[^/]+\/hard-suspend$/, (body) => hardSuspend(body)],
+  [/^\/admin\/customers\/[^/]+\/lift-suspension$/, (body) => liftSuspension(body)],
+  [/^\/admin\/customers\/[^/]+\/deletion-preview$/, () => ({ preview: deletionPreview() })],
+  [/^\/admin\/customers\/[^/]+\/deletion-request$/, () => deletionStep("DELETION_REQUESTED", { statusBefore: account.accountStatus })],
+  [/^\/admin\/customers\/[^/]+\/deletion-review$/, () => deletionStep("DELETION_REQUESTED")],
+  [/^\/admin\/customers\/[^/]+\/deletion-request\/cancel$/, () => deletionStep(account.statusBefore || "ACTIVE")],
+  [/^\/admin\/customers\/[^/]+\/deletion-operation$/, () => ({ operation })],
+  [/^\/admin\/customers\/[^/]+\/deletion\/execute$/, (body) => {
+    const refused = stepUp(body, "DELETE CUSTOMER");
+    if (refused) return refused;
+    if (!EXECUTION_ON) return { __status: 403, message: "Permanent deletion is not enabled on this server.", code: "DELETION_EXECUTION_DISABLED" };
+    const stages = ["ACCESS_REVOKED", "PERSONAL_DATA_REMOVED", "FILES_REMOVED", "RETAINED_RECORDS_DEIDENTIFIED", "AUTH_USER_REMOVED", "TOMBSTONE_CREATED"];
+    // &fail=files: stops at FILES_REMOVED for reconciliation, as an unreachable Storage would.
+    const fail = params.get("fail") === "files";
+    operation = {
+      operationId: "ACCDEL_synthetic",
+      opaqueDeletedCustomerRef: "deleted_customer_0123456789abcdef01234567",
+      policyVersion: "synthetic-test-approved",
+      status: fail ? "RECONCILIATION_REQUIRED" : "DELETION_COMPLETED",
+      currentStage: fail ? "FILES_REMOVED" : "DELETION_COMPLETED",
+      completedStages: fail ? stages.slice(0, 2) : stages,
+      completedActions: [],
+      failedAction: fail ? "FILES_REMOVED" : null,
+      safeErrorCategory: fail ? "STORAGE_DELETE_FAILED" : null,
+      attempt: 1,
+      startedAt: new Date().toISOString(),
+      completedAt: fail ? null : new Date().toISOString(),
+    };
+    Object.assign(account, { accountStatus: fail ? "DELETION_IN_PROGRESS" : "PERMANENTLY_DELETED", version: account.version + 1 });
+    return { operation, alreadyStarted: false };
+  }],
   [/^\/admin\/operations\/summary$/, () => ({ summary: OPERATIONS_SUMMARY })],
   [/^\/admin\/bitnob\/topup-requests$/, () => ({ requests: TOPUPS, provider: { available: true } })],
   [/^\/admin\/bitnob\/issuance$/, () => ISSUANCE],
