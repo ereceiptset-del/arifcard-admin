@@ -93,6 +93,14 @@ export default function DeletionPanel({ uid, summary, account, isAdmin, isOwner,
       onDone(result);
     } catch (e) {
       setProblem(errorText(e, "The approval didn't go through. Nothing was changed."));
+      // Show what blocks it: the eligibility list, grouped, right below.
+      if (e instanceof ApiError && e.code === "DELETION_BLOCKED") {
+        try {
+          setPreview((await customerAccessApi.deletionPreview(uid)).preview);
+        } catch {
+          /* the message above already names the items */
+        }
+      }
     } finally {
       setBusy(false);
     }
@@ -169,19 +177,19 @@ export default function DeletionPanel({ uid, summary, account, isAdmin, isOwner,
             Retention policy {preview.policyVersion} ({preview.policyStatus === "APPROVED" ? "approved" : "draft — not approved"}). Execution on this server:{" "}
             {preview.execution?.enabled ? "enabled (local emulators only)" : "disabled"}.
           </p>
-          {preview.blockers.length > 0 && (
-            <div>
-              <p className="text-small font-medium text-ink">Blocked by</p>
-              <ul className="mt-1.5 flex flex-col gap-1.5">
-                {preview.blockers.map((b) => (
-                  <li key={b.code} className="flex gap-2 text-small text-ink">
-                    <ShieldAlert size={16} aria-hidden className="mt-0.5 shrink-0 text-danger" />
-                    {b.message}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
+          <BlockerGroup
+            title="Resolve before approval"
+            hint="About this customer. Approval is refused until each is resolved."
+            items={preview.blockers.filter((b) => (b.scope || "case") === "case")}
+            tone="text-danger"
+          />
+          <BlockerGroup title="Steps still to do" items={preview.blockers.filter((b) => b.scope === "step")} tone="text-ink-muted" />
+          <BlockerGroup
+            title="Not available on this server yet"
+            hint="Final deletion also needs an approved retention policy and deletion switched on. These do not stop recording or approving a request."
+            items={preview.blockers.filter((b) => b.scope === "policy")}
+            tone="text-ink-muted"
+          />
           <div>
             <p className="text-small font-medium text-ink">Records found</p>
             <dl className="mt-1.5 divide-y divide-line rounded-control border border-line">
@@ -217,6 +225,24 @@ export default function DeletionPanel({ uid, summary, account, isAdmin, isOwner,
       {dialog === "execute" && <ExecuteDialog uid={uid} summary={summary} expectedVersion={account.version} onClose={() => setDialog(null)} onDone={after} />}
       {dialog === "resume" && <ExecuteDialog resume uid={uid} summary={summary} expectedVersion={account.version} onClose={() => setDialog(null)} onDone={after} />}
     </section>
+  );
+}
+
+function BlockerGroup({ title, hint, items, tone }) {
+  if (!items.length) return null;
+  return (
+    <div>
+      <p className="text-small font-medium text-ink">{title}</p>
+      {hint && <p className="text-caption text-ink-muted">{hint}</p>}
+      <ul className="mt-1.5 flex flex-col gap-1.5">
+        {items.map((b) => (
+          <li key={b.code} className="flex gap-2 text-small text-ink">
+            <ShieldAlert size={16} aria-hidden className={`mt-0.5 shrink-0 ${tone}`} />
+            {b.message}
+          </li>
+        ))}
+      </ul>
+    </div>
   );
 }
 
