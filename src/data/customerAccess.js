@@ -39,6 +39,14 @@ export const customerAccessApi = {
   resumeDeletion: (uid, body) => backendApi.post(`${base(uid)}/deletion/resume`, body, { auth: true }),
 };
 
+/**
+ * Account deletion is hidden (owner decision, 2026-10-21): temporary disable
+ * and hard suspension are the account controls. The backend refuses new
+ * deletion requests unless DELETION_REQUESTS_ENABLED; an account that still
+ * holds a request from earlier can have it withdrawn.
+ */
+export const DELETION_FEATURE_ENABLED = false;
+
 export const DELETE_CUSTOMER_PHRASE = "DELETE CUSTOMER";
 export const DELETION_REASONS = [
   { value: "CUSTOMER_REQUEST", label: "The customer asked for deletion" },

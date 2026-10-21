@@ -45,6 +45,13 @@ test("permanent deletion: preview and requests for administrators; execution off
   assert.ok(!/Permanently delete|"DELETE"/.test(component), "nothing irreversible in the access section itself");
 });
 
+test("deletion is hidden (owner decision): only a left-over request can be withdrawn", () => {
+  const panel = read("src/components/admin/DeletionPanel.jsx");
+  assert.match(data, /export const DELETION_FEATURE_ENABLED = false;/);
+  assert.match(panel, /if \(!DELETION_FEATURE_ENABLED\) \{\s*if \(!actions\.cancelDeletion\) return null;/);
+  assert.match(panel, /Withdraw deletion request/);
+});
+
 test("hard suspension: owner only, the brief's consequences, reason, password and the typed phrase", () => {
   const security = read("src/components/admin/SecurityActions.jsx");
   assert.equal(security.match(/disabled=\{!isOwner\}/g)?.length, 2, "suspend and lift");

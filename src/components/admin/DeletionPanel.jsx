@@ -9,6 +9,7 @@ import {
   DELETION_REASONS,
   DELETION_STAGE_LABEL,
   DELETION_OP_LABEL,
+  DELETION_FEATURE_ENABLED,
   PROVIDER_ACTION_OPTIONS,
   PROVIDER_ACTION_LABEL,
   ACCOUNT_HISTORY_LABEL,
@@ -109,6 +110,26 @@ export default function DeletionPanel({ uid, summary, account, isAdmin, isOwner,
   const failed = operation && ["DELETION_FAILED", "RECONCILIATION_REQUIRED"].includes(operation.status);
   const canExecute = preview?.canStartDeletion === true && isOwner;
   const actions = account.actions || {};
+
+  // Deletion hidden: nothing to show — except a way to withdraw a request left over from earlier.
+  if (!DELETION_FEATURE_ENABLED) {
+    if (!actions.cancelDeletion) return null;
+    return (
+      <section aria-labelledby="open-request-heading" className="rounded-control border border-line-strong p-4">
+        <h3 id="open-request-heading" className="text-h3 text-ink">
+          Open deletion request
+        </h3>
+        <p className="mt-1 text-small text-ink-soft">
+          Account deletion is turned off. This account still has a deletion request from earlier, which keeps it restricted. Withdraw it to return the
+          account to its previous state.
+        </p>
+        <Button className="mt-3" variant="secondary" icon={Undo2} disabled={!isAdmin} disabledReason="Only an administrator can withdraw a deletion request." onClick={() => setDialog("cancel")}>
+          Withdraw deletion request
+        </Button>
+        {dialog === "cancel" && <ReasonDialog kind="cancel" uid={uid} summary={summary} expectedVersion={account.version} onClose={() => setDialog(null)} onDone={after} />}
+      </section>
+    );
+  }
 
   return (
     <section aria-labelledby="danger-heading" className="rounded-control border border-danger p-4">
