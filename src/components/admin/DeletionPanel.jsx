@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { ShieldAlert, SearchCheck, FileX, RotateCcw, Undo2, Trash2, CheckCircle2, CircleDashed, XCircle } from "lucide-react";
+import { ShieldAlert, SearchCheck, FileX, RotateCcw, Undo2, Trash2, CheckCircle2, CircleDashed, XCircle, BadgeCheck } from "lucide-react";
 import { Button, Dialog, TextArea, TextInput, SelectInput, StatusPill, useToast, formatDateTime } from "@addiscard/ui";
 import { ApiError } from "@addiscard/services";
 import {
@@ -9,6 +9,9 @@ import {
   DELETION_REASONS,
   DELETION_STAGE_LABEL,
   DELETION_OP_LABEL,
+  PROVIDER_ACTION_OPTIONS,
+  PROVIDER_ACTION_LABEL,
+  ACCOUNT_HISTORY_LABEL,
 } from "../../data/customerAccess.js";
 
 /**
@@ -80,6 +83,21 @@ export default function DeletionPanel({ uid, summary, account, isAdmin, isOwner,
     onDone(result);
   };
 
+  const approve = async () => {
+    setBusy(true);
+    setProblem(null);
+    try {
+      const result = await customerAccessApi.approveDeletion(uid, { expectedVersion: account.version });
+      setPreview(result.preview);
+      toast.success("Deletion request approved. Execution still needs an approved retention policy and the owner.");
+      onDone(result);
+    } catch (e) {
+      setProblem(errorText(e, "The approval didn't go through. Nothing was changed."));
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const failed = operation && ["DELETION_FAILED", "RECONCILIATION_REQUIRED"].includes(operation.status);
   const canExecute = preview?.canStartDeletion === true && isOwner;
   const actions = account.actions || {};
@@ -105,6 +123,11 @@ export default function DeletionPanel({ uid, summary, account, isAdmin, isOwner,
             Re-check request
           </Button>
         )}
+        {actions.approveDeletion && (
+          <Button variant="secondary" icon={BadgeCheck} loading={busy} disabled={!isAdmin} disabledReason="Only an administrator can approve a deletion request." onClick={approve}>
+            Approve deletion request
+          </Button>
+        )}
         {actions.cancelDeletion && (
           <Button variant="ghost" icon={Undo2} disabled={!isAdmin} disabledReason="Only an administrator can withdraw a deletion request." onClick={() => setDialog("cancel")}>
             Withdraw deletion request
@@ -128,13 +151,20 @@ export default function DeletionPanel({ uid, summary, account, isAdmin, isOwner,
         </p>
       )}
 
-      {operation && <OperationProgress operation={operation} />}
+      {operation && <OperationProgress operation={operation} uid={uid} isAdmin={isAdmin} onChanged={setOperation} />}
+      {isAdmin && <AccountHistory uid={uid} version={account.version} />}
 
       {preview && (
         <div className="mt-4 flex flex-col gap-4" aria-live="polite">
           <p role="status" className="rounded-control border border-line bg-surface-2 px-3 py-2 text-small font-medium text-ink">
             {preview.canStartDeletion ? "Eligible for deletion." : "Not eligible: deletion cannot start."} Nothing was changed.
           </p>
+          {preview.request?.requestedAt && (
+            <p className="text-small text-ink">
+              Requested {formatDateTime(preview.request.requestedAt)} {preview.request.source === "customer" ? "by the customer in the app" : preview.request.requestedBy ? `by ${preview.request.requestedBy}` : ""}.{" "}
+              {preview.request.approvedAt ? `Approved ${formatDateTime(preview.request.approvedAt)}${preview.request.approvedBy ? ` by ${preview.request.approvedBy}` : ""}.` : "Not approved yet."}
+            </p>
+          )}
           <p className="text-caption text-ink-muted">
             Retention policy {preview.policyVersion} ({preview.policyStatus === "APPROVED" ? "approved" : "draft — not approved"}). Execution on this server:{" "}
             {preview.execution?.enabled ? "enabled (local emulators only)" : "disabled"}.
@@ -190,7 +220,7 @@ export default function DeletionPanel({ uid, summary, account, isAdmin, isOwner,
   );
 }
 
-function OperationProgress({ operation }) {
+function OperationProgress({ operation, uid, isAdmin, onChanged }) {
   const done = new Set(operation.completedStages);
   return (
     <div className="mt-4 rounded-control border border-line p-3">
@@ -214,10 +244,104 @@ function OperationProgress({ operation }) {
           );
         })}
       </ol>
+      {operation.notification && (
+        <p className="mt-2 text-caption text-ink-muted">
+          Customer email: {operation.notification.sent ? "sent" : `not sent (${operation.notification.category || "unknown"})`}.
+        </p>
+      )}
+      {operation.providerActions?.length > 0 && (
+        <div className="mt-3">
+          <p className="text-small font-medium text-ink">Provider-held records</p>
+          <p className="text-caption text-ink-muted">Local deletion does not remove these. Submit a request through the provider's own channel, then record the outcome here.</p>
+          <ul className="mt-2 flex flex-col gap-2">
+            {operation.providerActions.map((a) => (
+              <ProviderAction key={`${a.provider}-${a.reference}`} action={a} uid={uid} isAdmin={isAdmin} onChanged={onChanged} />
+            ))}
+          </ul>
+        </div>
+      )}
       <p className="mt-2 text-caption text-ink-muted">
         {operation.startedAt ? `Started ${formatDateTime(operation.startedAt)}` : ""}
         {operation.completedAt ? `. Completed ${formatDateTime(operation.completedAt)}` : ""}. Reference {operation.opaqueDeletedCustomerRef}.
       </p>
+    </div>
+  );
+}
+
+function ProviderAction({ action, uid, isAdmin, onChanged }) {
+  const toast = useToast();
+  const [status, setStatus] = useState("");
+  const [evidence, setEvidence] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [problem, setProblem] = useState(null);
+  const needsEvidence = ["CONFIRMED_DELETED", "PROVIDER_RETAINS"].includes(status);
+  const save = async () => {
+    setBusy(true);
+    setProblem(null);
+    try {
+      const { operation } = await customerAccessApi.recordProviderAction(uid, { provider: action.provider, reference: action.reference, status, evidence: evidence.trim() || undefined });
+      toast.success("Provider outcome recorded.");
+      onChanged(operation);
+    } catch (e) {
+      setProblem(errorText(e, "That didn't go through. Nothing was changed."));
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <li className="rounded-control border border-line p-3">
+      <p className="text-small text-ink">
+        {action.provider} ({action.kind === "CARD_PROVIDER" ? "card provider" : action.kind}) · {PROVIDER_ACTION_LABEL[action.status] || action.status}
+        {action.required ? " · required by policy" : " · tracked"}
+      </p>
+      {action.evidence && <p className="mt-1 text-caption text-ink-muted">Evidence: {action.evidence}</p>}
+      {isAdmin && action.status !== "CONFIRMED_DELETED" && (
+        <div className="mt-2 grid gap-2 sm:grid-cols-[1fr_1fr_auto] sm:items-end">
+          <SelectInput label="Outcome" value={status} onChange={(e) => setStatus(e.target.value)} options={PROVIDER_ACTION_OPTIONS} placeholder="Choose" />
+          <TextInput label={needsEvidence ? "Evidence (required)" : "Evidence (optional)"} value={evidence} onChange={(e) => setEvidence(e.target.value)} />
+          <Button variant="secondary" loading={busy} disabled={!status || (needsEvidence && evidence.trim().length < 10)} disabledReason="Choose the outcome; confirmation needs evidence." onClick={save}>
+            Record
+          </Button>
+        </div>
+      )}
+      {problem && (
+        <p role="alert" className="mt-2 text-small text-danger">
+          {problem}
+        </p>
+      )}
+    </li>
+  );
+}
+
+function AccountHistory({ uid, version }) {
+  const [history, setHistory] = useState(null);
+  useEffect(() => {
+    let live = true;
+    customerAccessApi
+      .accountHistory(uid)
+      .then((r) => live && setHistory(r.history || []))
+      .catch(() => live && setHistory([]));
+    return () => {
+      live = false;
+    };
+  }, [uid, version]);
+  if (!history || history.length === 0) return null;
+  return (
+    <div className="mt-4">
+      <p className="text-small font-medium text-ink">Account history</p>
+      <ol className="mt-1.5 divide-y divide-line rounded-control border border-line">
+        {history.map((h, i) => (
+          <li key={`${h.at}-${i}`} className="px-3 py-2 text-small">
+            <span className="font-medium text-ink">{ACCOUNT_HISTORY_LABEL[h.action] || h.action}</span>
+            <span className="text-ink-muted">
+              {" "}
+              · {h.at ? formatDateTime(h.at) : "time not recorded"}
+              {h.actorName ? ` · ${h.actorName}` : ""}
+            </span>
+            {h.reason && <p className="text-caption text-ink-muted">{h.reason}</p>}
+          </li>
+        ))}
+      </ol>
     </div>
   );
 }

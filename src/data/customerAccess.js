@@ -24,6 +24,12 @@ export const customerAccessApi = {
   reviewDeletion: (uid, { expectedVersion }) => backendApi.post(`${base(uid)}/deletion-review`, { expectedVersion }, { auth: true }),
   cancelDeletion: (uid, { reason, expectedVersion }) => backendApi.post(`${base(uid)}/deletion-request/cancel`, { reason, expectedVersion }, { auth: true }),
   deletionOperation: (uid) => backendApi.get(`${base(uid)}/deletion-operation`, { auth: true }),
+  /** Administrator: approve a request with no case blockers (the owner's execution requires it). */
+  approveDeletion: (uid, { expectedVersion }) => backendApi.post(`${base(uid)}/deletion-approve`, { expectedVersion }, { auth: true }),
+  /** Account-access and deletion history (audit). */
+  accountHistory: (uid) => backendApi.get(`${base(uid)}/account-history`, { auth: true }),
+  /** Record what a provider did with its copy — never assumed; "confirmed" needs evidence. */
+  recordProviderAction: (uid, body) => backendApi.post(`${base(uid)}/deletion/provider-actions`, body, { auth: true }),
   /**
    * Owner only, and refused by the server unless execution is enabled there
    * (never on a deployed server) and the retention policy is approved. The
@@ -42,6 +48,7 @@ export const DELETION_REASONS = [
 ];
 export const DELETION_STAGE_LABEL = {
   ACCESS_REVOKED: "Access revoked",
+  CUSTOMER_NOTIFIED: "Customer notified by email",
   PERSONAL_DATA_REMOVED: "Personal data removed",
   FILES_REMOVED: "Identity files removed",
   RETAINED_RECORDS_DEIDENTIFIED: "Retained records de-identified",
@@ -52,8 +59,28 @@ export const DELETION_OP_LABEL = {
   IN_PROGRESS: "In progress",
   DELETION_FAILED: "Failed — investigate, then resume",
   RECONCILIATION_REQUIRED: "Reconciliation required",
+  PROVIDER_ACTION_REQUIRED: "Provider action required",
   DELETION_COMPLETED: "Completed",
   CANCELLED: "Cancelled",
+};
+
+export const PROVIDER_ACTION_OPTIONS = [
+  { value: "REQUEST_SUBMITTED", label: "Deletion request submitted to the provider" },
+  { value: "CONFIRMED_DELETED", label: "Provider confirmed deletion (evidence required)" },
+  { value: "PROVIDER_RETAINS", label: "Provider retains the records (evidence required)" },
+  { value: "NOT_REQUIRED", label: "Not required" },
+];
+export const PROVIDER_ACTION_LABEL = { NOT_REQUESTED: "Not requested yet", ...Object.fromEntries(PROVIDER_ACTION_OPTIONS.map((o) => [o.value, o.label])) };
+
+export const ACCOUNT_HISTORY_LABEL = {
+  "customer.temporarily_disabled": "Temporarily disabled",
+  "customer.reenabled": "Re-enabled",
+  "customer.hard_suspended": "Hard-suspended",
+  "customer.hard_suspension_lifted": "Hard suspension lifted",
+  "customer.deletion_requested": "Deletion requested",
+  "customer.deletion_reviewed": "Deletion request reviewed",
+  "customer.deletion_approved": "Deletion request approved",
+  "customer.deletion_request_cancelled": "Deletion request withdrawn",
 };
 
 export const HARD_SUSPEND_PHRASE = "SUSPEND CUSTOMER";

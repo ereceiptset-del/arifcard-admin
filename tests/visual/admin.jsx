@@ -307,6 +307,7 @@ const accountView = () => ({
     hardSuspend: SUSPENDABLE.includes(account.accountStatus),
     liftSuspension: account.accountStatus === "HARD_SUSPENDED",
     requestDeletion: ["ACTIVE", "TEMPORARILY_DISABLED"].includes(account.accountStatus),
+    approveDeletion: account.accountStatus === "DELETION_REQUESTED" && !account.approved,
     reviewDeletion: ["DELETION_REQUESTED", "DELETION_BLOCKED"].includes(account.accountStatus),
     cancelDeletion: ["DELETION_REQUESTED", "DELETION_BLOCKED"].includes(account.accountStatus),
     checkDeletion: true,
@@ -392,11 +393,23 @@ const ROUTES = [
   [/^\/admin\/customers\/[^/]+\/deletion-review$/, () => deletionStep("DELETION_REQUESTED")],
   [/^\/admin\/customers\/[^/]+\/deletion-request\/cancel$/, () => deletionStep(account.statusBefore || "ACTIVE")],
   [/^\/admin\/customers\/[^/]+\/deletion-operation$/, () => ({ operation })],
+  [/^\/admin\/customers\/[^/]+\/deletion-approve$/, () => deletionStep("DELETION_REQUESTED", { approved: true })],
+  [/^\/admin\/customers\/[^/]+\/account-history$/, () => ({
+    history: [
+      { action: "customer.deletion_requested", actorName: "Customer (self-service)", reason: "Requested by the customer in the app", at: ago(30) },
+      { action: "customer.temporarily_disabled", actorName: "Test Staff", reason: "Synthetic: unusual payment pattern under review.", at: ago(60 * 26) },
+    ],
+  })],
+  [/^\/admin\/customers\/[^/]+\/deletion\/provider-actions$/, (body) => {
+    if (!operation) return { __status: 404, message: "No deletion operation for this customer.", code: "NOT_FOUND" };
+    operation.providerActions = operation.providerActions.map((a) => (a.reference === body.reference ? { ...a, status: body.status, evidence: body.evidence || null } : a));
+    return { operation };
+  }],
   [/^\/admin\/customers\/[^/]+\/deletion\/execute$/, (body) => {
     const refused = stepUp(body, "DELETE CUSTOMER");
     if (refused) return refused;
     if (!EXECUTION_ON) return { __status: 403, message: "Permanent deletion is not enabled on this server.", code: "DELETION_EXECUTION_DISABLED" };
-    const stages = ["ACCESS_REVOKED", "PERSONAL_DATA_REMOVED", "FILES_REMOVED", "RETAINED_RECORDS_DEIDENTIFIED", "AUTH_USER_REMOVED", "TOMBSTONE_CREATED"];
+    const stages = ["ACCESS_REVOKED", "CUSTOMER_NOTIFIED", "PERSONAL_DATA_REMOVED", "FILES_REMOVED", "RETAINED_RECORDS_DEIDENTIFIED", "AUTH_USER_REMOVED", "TOMBSTONE_CREATED"];
     // &fail=files: stops at FILES_REMOVED for reconciliation, as an unreachable Storage would.
     const fail = params.get("fail") === "files";
     operation = {
@@ -409,6 +422,8 @@ const ROUTES = [
       completedActions: [],
       failedAction: fail ? "FILES_REMOVED" : null,
       safeErrorCategory: fail ? "STORAGE_DELETE_FAILED" : null,
+      providerActions: [{ provider: "BITNOB", kind: "CARD_PROVIDER", reference: "synthetic-provider-customer", required: false, status: "NOT_REQUESTED", recordedAt: null, recordedBy: null, evidence: null }],
+      notification: { sent: true, category: null },
       attempt: 1,
       startedAt: new Date().toISOString(),
       completedAt: fail ? null : new Date().toISOString(),

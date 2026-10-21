@@ -39,6 +39,16 @@ const ACTIONS = [
   ["provider.event.reprocess", "Issuer event reprocessed"],
   ["customer.temporarily_disabled", "Customer account disabled"],
   ["customer.reenabled", "Customer account re-enabled"],
+  ["customer.hard_suspended", "Customer hard-suspended"],
+  ["customer.hard_suspension_lifted", "Hard suspension lifted"],
+  ["customer.deletion_requested", "Deletion requested"],
+  ["customer.deletion_reviewed", "Deletion request reviewed"],
+  ["customer.deletion_approved", "Deletion request approved"],
+  ["customer.deletion_request_cancelled", "Deletion request withdrawn"],
+  ["customer.deletion_started", "Deletion started"],
+  ["customer.deletion_failed", "Deletion stopped (failure)"],
+  ["customer.deletion_completed", "Deletion completed"],
+  ["customer.deletion_provider_action_recorded", "Provider outcome recorded"],
   ["staff.owner.granted", "Ownership granted"],
 ];
 const LABEL = Object.fromEntries(ACTIONS);
